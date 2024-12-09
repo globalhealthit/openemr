@@ -20,6 +20,8 @@ use OpenEMR\Common\Uuid\UuidRegistry;
 use OpenEMR\Services\FacilityService;
 use OpenEMR\Services\PatientService;
 use OpenEMR\Services\SocialHistoryService;
+use OpenEMR\Billing\InsurancePolicyTypes;
+use OpenEMR\Services\InsuranceCompanyService;
 
 require_once(dirname(__FILE__) . "/dupscore.inc.php");
 
@@ -41,18 +43,7 @@ $PLAYER_FITCOLORS = array('#6677ff', '#00cc00', '#ffff00', '#ff3333', '#ff8800',
 // Hard-coding this array because its values and meanings are fixed by the 837p
 // standard and we don't want people messing with them.
 global $policy_types;
-$policy_types = array(
-  ''   => xl('N/A'),
-  '12' => xl('Working Aged Beneficiary or Spouse with Employer Group Health Plan'),
-  '13' => xl('End-Stage Renal Disease Beneficiary in MCP with Employer`s Group Plan'),
-  '14' => xl('No-fault Insurance including Auto is Primary'),
-  '15' => xl('Worker`s Compensation'),
-  '16' => xl('Public Health Service (PHS) or Other Federal Agency'),
-  '41' => xl('Black Lung'),
-  '42' => xl('Veteran`s Administration'),
-  '43' => xl('Disabled Beneficiary Under Age 65 with Large Group Health Plan (LGHP)'),
-  '47' => xl('Other Liability Insurance is Primary'),
-);
+$policy_types = InsurancePolicyTypes::getTranslatedPolicyTypes();
 
 /**
  * Get a patient's demographic data.
@@ -126,37 +117,8 @@ function getInsuranceProvidersExtra()
     $rez = sqlStatement($sql);
 
     for ($iter = 0; $row = sqlFetchArray($rez); $iter++) {
-        switch ($GLOBALS['insurance_information']) {
-            case $GLOBALS['insurance_information'] = '0':
-                $returnval[$row['id']] = $row['name'];
-                break;
-            case $GLOBALS['insurance_information'] = '1':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '2':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ", " . $row['zip'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '3':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ", " . $row['state'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '4':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ", " . $row['state'] .
-                    ", " . $row['zip'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '5':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ", " . $row['city'] .
-                    ", " . $row['state'] . ", " . $row['zip'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '6':
-                $returnval[$row['id']] = $row['name'] . " (" . $row['line1'] . ", " . $row['line2'] . ", " . $row['city'] .
-                    ", " . $row['state'] . ", " . $row['zip'] . ", " . $row['cms_id'] . ")";
-                break;
-            case $GLOBALS['insurance_information'] = '7':
-                preg_match("/\d+/", $row['line1'], $matches);
-                $returnval[$row['id']] = $row['name'] . " (" . $row['zip'] .
-                    "," . $matches[0] . ")";
-                break;
-        }
+        $displayName = InsuranceCompanyService::getDisplayNameForInsuranceRecord($row);
+        $returnval[$row['id']] = $displayName;
     }
 
     return $returnval;
@@ -301,7 +263,7 @@ function getProviderInfo($providerID = "%", $providers_only = true, $facility = 
     }
 
 // removing active from query since is checked above with $providers_only argument
-    $query = "select distinct id, username, lname, fname, authorized, info, facility, suffix " .
+    $query = "select distinct id, username, lname, fname, mname, authorized, info, facility, suffix, valedictory " .
         "from users where username != '' and id $command '" .
         add_escape_custom($providerID) . "' " . $param1 . $param2;
     // sort by last name -- JRM June 2008
@@ -328,8 +290,16 @@ function getProviderName($providerID, $provider_only = 'any')
 {
     $pi = getProviderInfo($providerID, $provider_only);
     if (!empty($pi[0]["lname"]) && (strlen($pi[0]["lname"]) > 0)) {
+        if (!empty($pi[0]["mname"]) && (strlen($pi[0]["mname"]) > 0)) {
+            $pi[0]["fname"] .= " " . $pi[0]["mname"];
+        }
+
         if (!empty($pi[0]["suffix"]) && (strlen($pi[0]["suffix"]) > 0)) {
             $pi[0]["lname"] .= ", " . $pi[0]["suffix"];
+        }
+
+        if (!empty($pi[0]["valedictory"]) && (strlen($pi[0]["valedictory"]) > 0)) {
+            $pi[0]["lname"] .= ", " . $pi[0]["valedictory"];
         }
 
         return $pi[0]['fname'] . " " . $pi[0]['lname'];
@@ -381,6 +351,19 @@ function getInsuranceData($pid, $type = "primary", $given = "insd.*, ic.name as 
     "left join insurance_companies as ic on ic.id = insd.provider " .
     "where pid = ? and type = ? order by date DESC limit 1";
     return sqlQuery($sql, array($pid, $type));
+}
+
+function getInsuranceDataNew($pid, $type = "primary", $given = "insd.*, ic.name as provider_name")
+{
+    $sql = "select $given from insurance_data as insd " .
+    "left join insurance_companies as ic on ic.id = insd.provider " .
+    "where pid = ? and type = ? order by date DESC";
+    $sql_res = sqlStatement($sql, array($pid, $type));
+    while ($row = sqlFetchArray($sql_res)) {
+        $insarr[] = $row;
+    };
+
+    return $insarr;
 }
 
 // To prevent sql injection on this function, if a variable is used for $given parameter, then
@@ -1342,151 +1325,70 @@ function newInsuranceData(
         $effective_date_end = null;
     }
 
-    $idres = sqlStatement("SELECT * FROM insurance_data WHERE " .
-    "pid = ? AND type = ? ORDER BY date DESC", array($pid,$type));
-    $idrow = sqlFetchArray($idres);
-
-    // Replace the most recent entry in any of the following cases:
-    // * Its effective date is >= this effective date.
-    // * It is the first entry and it has no (insurance) provider.
-    // * There is no encounter that is earlier than the new effective date but
-    //   on or after the old effective date.
-    // Otherwise insert a new entry.
-
-    $replace = false;
-    if ($idrow) {
-        // convert date from null to "0000-00-00" for below strcmp and query
-        $temp_idrow_date = (!empty($idrow['date'])) ? $idrow['date'] : "0000-00-00";
-        $temp_effective_date = (!empty($effective_date)) ? $effective_date : "0000-00-00";
-        if (strcmp($temp_idrow_date, $temp_effective_date) > 0) {
-            $replace = true;
-        } else {
-            if (!$idrow['provider'] && !sqlFetchArray($idres)) {
-                $replace = true;
-            } else {
-                $ferow = sqlQuery("SELECT count(*) AS count FROM form_encounter " .
-                "WHERE pid = ? AND date < ? AND " .
-                "date >= ?", array($pid, $temp_effective_date . " 00:00:00", $temp_idrow_date . " 00:00:00"));
-                if ($ferow['count'] == 0) {
-                    $replace = true;
-                }
-            }
-        }
-    }
-
-    if ($replace) {
-        // TBD: This is a bit dangerous in that a typo in entering the effective
-        // date can wipe out previous insurance history.  So we want some data
-        // entry validation somewhere.
-        if ($effective_date === null) {
-            sqlStatement("DELETE FROM insurance_data WHERE " .
-                "pid = ? AND type = ? AND " .
-                "id != ?", array($pid, $type, $idrow['id']));
-        } else {
-            sqlStatement("DELETE FROM insurance_data WHERE " .
-                "pid = ? AND type = ? AND date >= ? AND " .
-                "id != ?", array($pid, $type, $effective_date, $idrow['id']));
-        }
-
-        $data = array();
-        $data['type'] = $type;
-        $data['provider'] = $provider;
-        $data['policy_number'] = $policy_number;
-        $data['group_number'] = $group_number;
-        $data['plan_name'] = $plan_name;
-        $data['subscriber_lname'] = $subscriber_lname;
-        $data['subscriber_mname'] = $subscriber_mname;
-        $data['subscriber_fname'] = $subscriber_fname;
-        $data['subscriber_relationship'] = $subscriber_relationship;
-        $data['subscriber_ss'] = $subscriber_ss;
-        $data['subscriber_DOB'] = $subscriber_DOB;
-        $data['subscriber_street'] = $subscriber_street;
-        $data['subscriber_postal_code'] = $subscriber_postal_code;
-        $data['subscriber_city'] = $subscriber_city;
-        $data['subscriber_state'] = $subscriber_state;
-        $data['subscriber_country'] = $subscriber_country;
-        $data['subscriber_phone'] = $subscriber_phone;
-        $data['subscriber_employer'] = $subscriber_employer;
-        $data['subscriber_employer_city'] = $subscriber_employer_city;
-        $data['subscriber_employer_street'] = $subscriber_employer_street;
-        $data['subscriber_employer_postal_code'] = $subscriber_employer_postal_code;
-        $data['subscriber_employer_state'] = $subscriber_employer_state;
-        $data['subscriber_employer_country'] = $subscriber_employer_country;
-        $data['copay'] = $copay;
-        $data['subscriber_sex'] = $subscriber_sex;
-        $data['pid'] = $pid;
-        $data['date'] = $effective_date;
-        $data['accept_assignment'] = $accept_assignment;
-        $data['policy_type'] = $policy_type;
-        $data['date_end'] = $effective_date_end;
-        updateInsuranceData($idrow['id'], $data);
-        return $idrow['id'];
-    } else {
-        return sqlInsert(
-            "INSERT INTO `insurance_data` SET `type` = ?,
-            `provider` = ?,
-            `policy_number` = ?,
-            `group_number` = ?,
-            `plan_name` = ?,
-            `subscriber_lname` = ?,
-            `subscriber_mname` = ?,
-            `subscriber_fname` = ?,
-            `subscriber_relationship` = ?,
-            `subscriber_ss` = ?,
-            `subscriber_DOB` = ?,
-            `subscriber_street` = ?,
-            `subscriber_postal_code` = ?,
-            `subscriber_city` = ?,
-            `subscriber_state` = ?,
-            `subscriber_country` = ?,
-            `subscriber_phone` = ?,
-            `subscriber_employer` = ?,
-            `subscriber_employer_city` = ?,
-            `subscriber_employer_street` = ?,
-            `subscriber_employer_postal_code` = ?,
-            `subscriber_employer_state` = ?,
-            `subscriber_employer_country` = ?,
-            `copay` = ?,
-            `subscriber_sex` = ?,
-            `pid` = ?,
-            `date` = ?,
-            `accept_assignment` = ?,
-            `policy_type` = ?,
-            `date_end` = ?",
-            [
-                $type,
-                $provider,
-                $policy_number,
-                $group_number,
-                $plan_name,
-                $subscriber_lname,
-                $subscriber_mname,
-                $subscriber_fname,
-                $subscriber_relationship,
-                $subscriber_ss,
-                $subscriber_DOB,
-                $subscriber_street,
-                $subscriber_postal_code,
-                $subscriber_city,
-                $subscriber_state,
-                $subscriber_country,
-                $subscriber_phone,
-                $subscriber_employer,
-                $subscriber_employer_city,
-                $subscriber_employer_street,
-                $subscriber_employer_postal_code,
-                $subscriber_employer_state,
-                $subscriber_employer_country,
-                $copay,
-                $subscriber_sex,
-                $pid,
-                $effective_date,
-                $accept_assignment,
-                $policy_type,
-                $effective_date_end
-            ]
-        );
-    }
+    return sqlInsert(
+        "INSERT INTO `insurance_data` SET `type` = ?,
+        `provider` = ?,
+        `policy_number` = ?,
+        `group_number` = ?,
+        `plan_name` = ?,
+        `subscriber_lname` = ?,
+        `subscriber_mname` = ?,
+        `subscriber_fname` = ?,
+        `subscriber_relationship` = ?,
+        `subscriber_ss` = ?,
+        `subscriber_DOB` = ?,
+        `subscriber_street` = ?,
+        `subscriber_postal_code` = ?,
+        `subscriber_city` = ?,
+        `subscriber_state` = ?,
+        `subscriber_country` = ?,
+        `subscriber_phone` = ?,
+        `subscriber_employer` = ?,
+        `subscriber_employer_city` = ?,
+        `subscriber_employer_street` = ?,
+        `subscriber_employer_postal_code` = ?,
+        `subscriber_employer_state` = ?,
+        `subscriber_employer_country` = ?,
+        `copay` = ?,
+        `subscriber_sex` = ?,
+        `pid` = ?,
+        `date` = ?,
+        `accept_assignment` = ?,
+        `policy_type` = ?,
+        `date_end` = ?",
+        [
+            $type,
+            $provider,
+            $policy_number,
+            $group_number,
+            $plan_name,
+            $subscriber_lname,
+            $subscriber_mname,
+            $subscriber_fname,
+            $subscriber_relationship,
+            $subscriber_ss,
+            $subscriber_DOB,
+            $subscriber_street,
+            $subscriber_postal_code,
+            $subscriber_city,
+            $subscriber_state,
+            $subscriber_country,
+            $subscriber_phone,
+            $subscriber_employer,
+            $subscriber_employer_city,
+            $subscriber_employer_street,
+            $subscriber_employer_postal_code,
+            $subscriber_employer_state,
+            $subscriber_employer_country,
+            $copay,
+            $subscriber_sex,
+            $pid,
+            $effective_date,
+            $accept_assignment,
+            $policy_type,
+            $effective_date_end
+        ]
+    );
 }
 
 // This is used internally only.
@@ -1647,8 +1549,8 @@ function getEffectiveInsurances($patient_id, $encdate)
         $tmp = sqlQuery(
             "SELECT * FROM insurance_data " .
             "WHERE pid = ? AND type = ? " .
-            "AND (date <= ? OR date IS NULL) ORDER BY date DESC LIMIT 1",
-            array($patient_id, $instype, $encdate)
+            "AND (date <= ? OR date IS NULL) AND (date_end >= ? OR date_end IS NULL) ORDER BY date DESC LIMIT 1",
+            array($patient_id, $instype, $encdate, $encdate)
         );
         if (empty($tmp['provider'])) {
             break;
@@ -1696,7 +1598,7 @@ function getAllinsurances($pid)
  * @param int     Optional encounter id. If value is passed, will fetch only bills from specified encounter.
  * @return number The balance.
  */
-function get_patient_balance($pid, $with_insurance = false, $eid = false)
+function get_patient_balance($pid, $with_insurance = false, $eid = false, $in_collection = false)
 {
     $balance = 0;
     $bindarray = array($pid);
@@ -1706,6 +1608,11 @@ function get_patient_balance($pid, $with_insurance = false, $eid = false)
     if ($eid) {
         $sqlstatement .= " AND encounter = ?";
         array_push($bindarray, $eid);
+    }
+
+    if ($in_collection) {
+        $sqlstatement .= " AND in_collection = ?";
+        array_push($bindarray, 1);
     }
     $feres = sqlStatement($sqlstatement, $bindarray);
     while ($ferow = sqlFetchArray($feres)) {
@@ -1739,10 +1646,16 @@ function get_patient_balance($pid, $with_insurance = false, $eid = false)
                 $balance += $ptbal;
             }
         } else {
-            // Including insurance or not out to insurance, everything is due.
-            $brow = sqlQuery("SELECT SUM(fee) AS amount FROM billing WHERE " .
-            "pid = ? AND encounter = ? AND " .
-            "activity = 1", array($pid, $encounter));
+            if (!$with_insurance && $ferow['last_level_closed'] >= $inscount && $in_collection) {
+                $brow = sqlQuery("SELECT SUM(fee) AS amount FROM billing WHERE " .
+                    "pid = ? AND encounter = ? AND " .
+                    "activity = 1", array($pid, $encounter));
+            } else {
+                // Including insurance or not out to insurance, everything is due.
+                $brow = sqlQuery("SELECT SUM(fee) AS amount FROM billing WHERE " .
+                    "pid = ? AND encounter = ? AND " .
+                    "activity = 1", array($pid, $encounter));
+            }
             $drow = sqlQuery("SELECT SUM(pay_amount) AS payments, " .
               "SUM(adj_amount) AS adjustments FROM ar_activity WHERE " .
               "deleted IS NULL AND pid = ? AND encounter = ?", array($pid, $encounter));

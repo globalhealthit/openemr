@@ -9,9 +9,11 @@
  * @author    Brady Miller <brady.g.miller@gmail.com>
  * @author    Ranganath Pathak <pathak@scrs1.org>
  * @author    Jerry Padgett <sjpadgett@gmail.com>
+ * @author    Stephen Nielson <snielson@discoverandchange.com>
  * @copyright Copyright (c) 2016 Kevin Yeh <kevin.y@integralemr.com>
  * @copyright Copyright (c) 2016-2019 Brady Miller <brady.g.miller@gmail.com>
  * @copyright Copyright (c) 2019 Ranganath Pathak <pathak@scrs1.org>
+ * @copyright Copyright (c) 2024 Care Management Solutions, Inc. <stephen.waite@cmsvt.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
@@ -86,11 +88,14 @@ $esignApi = new Api();
         var csrf_token_js = <?php echo js_escape(CsrfUtils::collectCsrfToken()); ?>;
         var userDebug = <?php echo js_escape($GLOBALS['user_debug']); ?>;
         var webroot_url = <?php echo js_escape($web_root); ?>;
-        var jsLanguageDirection = <?php echo js_escape($_SESSION['language_direction']); ?>;
+        var jsLanguageDirection = <?php echo js_escape($_SESSION['language_direction']); ?> || 'ltr';
         var jsGlobals = {}; // this should go away and replace with just global_enable_group_therapy
         // used in tabs_view_model.js.
-        jsGlobals.enable_group_therapy = <?php echo js_escape($GLOBALS['enable_group_therapy']); ?>
-
+        jsGlobals.enable_group_therapy = <?php echo js_escape($GLOBALS['enable_group_therapy']); ?>;
+        jsGlobals.languageDirection = jsLanguageDirection;
+        jsGlobals.date_display_format = <?php echo js_escape($GLOBALS['date_display_format']); ?>;
+        jsGlobals.timezone = <?php echo js_escape($GLOBALS['gbl_time_zone'] ?? ''); ?>;
+        jsGlobals.assetVersion = <?php echo js_escape($GLOBALS['v_js_includes']); ?>;
         var WindowTitleAddPatient = <?php echo ($GLOBALS['window_title_add_patient_name'] ? 'true' : 'false' ); ?>;
         var WindowTitleBase = <?php echo js_escape($openemr_name); ?>;
         const isSms = "<?php echo !empty($GLOBALS['oefax_enable_sms'] ?? null); ?>";
@@ -376,6 +381,7 @@ if (!empty($GLOBALS['kernel']->getEventDispatcher())) {
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
+            <?php if ($GLOBALS['search_any_patient'] != 'none') : ?>
             <form name="frm_search_globals" class="form-inline">
                 <div class="input-group">
                     <input type="text" id="anySearchBox" class="form-control-sm <?php echo $any_search_class ?> form-control" name="anySearchBox" placeholder="<?php echo xla("Search by any demographics") ?>" autocomplete="off">
@@ -384,6 +390,7 @@ if (!empty($GLOBALS['kernel']->getEventDispatcher())) {
                     </div>
                 </div>
             </form>
+            <?php endif; ?>
             <span id="userData" data-bind="template: {name: 'user-data-template', data: application_data}"></span>
         </nav>
         <div id="attendantData" class="body_title acck" data-bind="template: {name: app_view_model.attendant_template_type, data: application_data}"></div>

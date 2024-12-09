@@ -63,19 +63,8 @@ class PatientMenuRole extends MenuRole
         if (!$menu_parsed) {
             die("\nJSON ERROR: " . json_last_error());
         }
-        //to make the url absolute to web root and to account for external urls i.e. those beginning with http or https
-        foreach ($menu_parsed as $menu_obj) {
-            if (property_exists($menu_obj, 'url')) {
-                $menu_obj -> url = $this->getAbsoluteWebRoot($menu_obj -> url);
-            }
-            if (!empty($menu_obj->children)) {
-                foreach ($menu_obj->children as $menu_obj) {
-                    if (property_exists($menu_obj, 'url')) {
-                        $menu_obj -> url = $this->getAbsoluteWebRoot($menu_obj -> url);
-                    }
-                }
-            }
-        }
+
+        $menu_parsed = $this->setPatientMenuUrl($menu_parsed);
 
         // Parse the menu JSON and build the menu. Also, tell the EventDispatcher about the event
         // so that 3rd party modules may modify the menu items
@@ -202,11 +191,11 @@ class PatientMenuRole extends MenuRole
             if (!empty($value->children)) {
                 // create dropdown if there are children (bootstrap3 horizontal nav bar with dropdown)
                 $class = isset($value->class) ? $value->class : '';
-                $list = '<li class="dropdown"><a href="#"  id="' . attr($value->menu_id) . '" class="nav-link dropdown-toggle text-body ' . attr($class) . '" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' . text($value->label) . ' <span class="caret"></span></a>';
+                $list = '<li class="dropdown"><a href="#"  id="' . attr($value->menu_id ?? $value->label) . '" class="nav-link dropdown-toggle text-body ' . attr($class) . '" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">' . text($value->label) . ' <span class="caret"></span></a>';
                 $list .= '<ul class="dropdown-menu">';
                 foreach ($value->children as $children_key => $children_value) {
                     $link = ($children_value->pid != "true") ? $children_value->url : $children_value->url . attr($pid);
-                    $class = isset($children_value->class) ? $children_value->class : '';
+                    $class = $children_value->class ?? '';
                     $list .= '<li class="nav-item ' . attr($class) . '" id="' . attr($children_value->menu_id) . '">';
                     $list .= '<a class="nav-link text-dark"  href="' . attr($link) . '" onclick="' . $children_value->on_click . '"> ' . text($children_value->label) . ' </a>';
                     $list .= '</li>';
@@ -243,5 +232,24 @@ class PatientMenuRole extends MenuRole
             return $GLOBALS['webroot'] . "/" . $rel_url;
         }
         return $rel_url;
+    }
+
+    public function setPatientMenuUrl($menu_parsed)
+    {
+    //to make the url absolute to web root and to account for external urls i.e. those beginning with http or https
+        foreach ($menu_parsed as $menu_obj) {
+            if (property_exists($menu_obj, 'url')) {
+                $menu_obj->url = $this->getAbsoluteWebRoot($menu_obj->url);
+            }
+            if (!empty($menu_obj->children)) {
+                foreach ($menu_obj->children as $menu_obj) {
+                    if (property_exists($menu_obj, 'url')) {
+                        $menu_obj->url = $this->getAbsoluteWebRoot($menu_obj->url);
+                    }
+                }
+            }
+        }
+
+        return $menu_parsed;
     }
 }

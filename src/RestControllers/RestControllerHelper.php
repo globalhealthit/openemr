@@ -119,12 +119,13 @@ class RestControllerHelper
      * @param        $isMultipleResultResponse - Indicates if the response contains multiple results.
      * @return array[]
      */
-    public static function handleProcessingResult($processingResult, $successStatusCode, $isMultipleResultResponse = false): array
+    public static function handleProcessingResult(ProcessingResult $processingResult, $successStatusCode, $isMultipleResultResponse = false): array
     {
         $httpResponseBody = [
             "validationErrors" => [],
             "internalErrors" => [],
-            "data" => []
+            "data" => [],
+            "links" => []
         ];
         if (!$processingResult->isValid()) {
             http_response_code(400);
@@ -135,13 +136,25 @@ class RestControllerHelper
             $httpResponseBody["internalErrors"] = $processingResult->getInternalErrors();
             (new SystemLogger())->debug("RestControllerHelper::handleProcessingResult() 500 error", ['internalErrors' => $processingResult->getValidationMessages()]);
         } else {
-            http_response_code($successStatusCode);
+            http_response_code($successStatusCode ?? 0);
             $dataResult = $processingResult->getData();
             $recordsCount = count($dataResult);
             (new SystemLogger())->debug("RestControllerHelper::handleFhirProcessingResult() Records found", ['count' => $recordsCount]);
 
             if (!$isMultipleResultResponse) {
                 $dataResult = ($recordsCount === 0) ? [] : $dataResult[0];
+            } else {
+                $pagination = $processingResult->getPagination();
+                // if site_addr_oauth is not set then we set it to be empty so we can handle relative urls
+                $bundleUrl = ($GLOBALS['site_addr_oath'] ?? '') . ($_SERVER['REDIRECT_URL'] ?? '');
+                $getParams = $_GET;
+                // cleanup _limit and _offset
+                unset($getParams['_limit']);
+                unset($getParams['_offset']);
+                $queryParams = http_build_query($getParams);
+
+                $pagination->setSearchUri($bundleUrl . '?' . $queryParams);
+                $httpResponseBody['links'] = $processingResult->getPagination()->getLinks();
             }
 
             $httpResponseBody["data"] = $dataResult;
@@ -265,28 +278,30 @@ class RestControllerHelper
         }
 
         if ($operation == '$export') {
+            // operation definition must use the operation 'name'
+            // rest.resource.operation.name must come from the OperationDefinition's code attribute which in this case is 'export'
+            $definitionName = 'export';
+            $operationName = 'export';
             if ($resource != '$export') {
-                $operationName = strtolower($resource) . '-export';
-            } else {
-                $operationName = 'export';
+                $definitionName = strtolower($resource) . '-export';
             }
             // define export operation
             $fhirOperation = new FHIRCapabilityStatementOperation();
-            $fhirOperation->setName($operation);
-            $fhirOperation->setDefinition(new FHIRCanonical('http://hl7.org/fhir/uv/bulkdata/OperationDefinition/' . $operationName));
+            $fhirOperation->setName($operationName);
+            $fhirOperation->setDefinition(new FHIRCanonical('http://hl7.org/fhir/uv/bulkdata/OperationDefinition/' . $definitionName));
             $capResource->addOperation($fhirOperation);
-        } else if ($operation === '$bulkdata-status') {
+        } elseif ($operation === '$bulkdata-status') {
             $fhirOperation = new FHIRCapabilityStatementOperation();
             $fhirOperation->setName($operation);
             $fhirOperation->setDefinition($this->restURL . '/OperationDefinition/$bulkdata-status');
             $capResource->addOperation($fhirOperation);
             // TODO: @adunsulag we should document in our capability statement how to use the bulkdata-status operation
-        } else if ($operation === '$docref') {
+        } elseif ($operation === '$docref') {
             $fhirOperation = new FHIRCapabilityStatementOperation();
             $fhirOperation->setName($operation);
             $fhirOperation->setDefinition(new FHIRCanonical('http://hl7.org/fhir/us/core/OperationDefinition/docref'));
             $capResource->addOperation($fhirOperation);
-        } else if (is_string($operation) && strpos($operation, '$') === 0) {
+        } elseif (is_string($operation) && strpos($operation, '$') === 0) {
             (new SystemLogger())->debug("Found operation that is not supported in system", ['resource' => $resource, 'operation' => $operation, 'items' => $items]);
         }
     }

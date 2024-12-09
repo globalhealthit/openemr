@@ -65,15 +65,33 @@ class PatientAccessOnsiteService
         $this->logger = new SystemLogger();
     }
 
+    /**
+     * User settings is used extensively throughout
+     * OpenEMR to persist user specific values.
+     *
+     * @param $label
+     * @param $user
+     * @return mixed|string
+     */
+    public static function fetchUserSetting($label, $user = null): mixed
+    {
+        $sql = "SELECT setting_value FROM user_settings WHERE setting_user = ? AND setting_label = ? ORDER BY setting_user LIMIT 1";
+        $user = (is_null($user) ? $_SESSION['authUserID'] ?? null : $user);
+        $rtn = sqlQueryNoLog($sql, array($user, $label));
+
+        return $rtn['setting_value'] ?? 0;
+    }
+
     public function setTwigEnvironment(Environment $twig)
     {
         $this->twig = $twig;
     }
 
-    public function saveCredentials($pid, $pwd, $userName, $loginUsername)
+    public function saveCredentials($pid, $pwd, $userName, $loginUsername, $forced_reset_disable)
     {
         $trustedEmail = $this->getTrustedEmailForPid($pid);
         $clear_pass = $pwd;
+        $forced_reset_disable = !empty($forced_reset_disable) ? 1 : 0;
 
         $res = sqlStatement("SELECT * FROM patient_access_onsite WHERE pid=?", array($pid));
         // we let module writers know we are about to update the patient portal credentials in case any additional stuff needs to happen
@@ -83,16 +101,17 @@ class PatientAccessOnsiteService
             ->setLoginUsername($loginUsername ?? '');
 
         $updatedEvent = $this->kernel->getEventDispatcher()->dispatch($preUpdateEvent, PortalCredentialsUpdatedEvent::EVENT_UPDATE_PRE) ?? $preUpdateEvent;
-        $query_parameters = array($updatedEvent->getUsername(),$updatedEvent->getLoginUsername());
+        $query_parameters = array($updatedEvent->getUsername(), $updatedEvent->getLoginUsername());
         $hash = (new AuthHash('auth'))->passwordHash($clear_pass);
         if (empty($hash)) {
             // Something is seriously wrong
             error_log('OpenEMR Error : OpenEMR is not working because unable to create a hash.');
             die("OpenEMR Error : OpenEMR is not working because unable to create a hash.");
         }
-
-        array_push($query_parameters, $hash);
-        array_push($query_parameters, $pid);
+        // direct array set for performance. array_push is needy.
+        $query_parameters[] = $hash;
+        $query_parameters[] = $forced_reset_disable;
+        $query_parameters[] = $pid;
 
         EventAuditLogger::instance()->newEvent(
             "patient-access",
@@ -105,9 +124,9 @@ class PatientAccessOnsiteService
             'dashboard'
         );
         if (sqlNumRows($res)) {
-            sqlStatementNoLog("UPDATE patient_access_onsite SET portal_username=?, portal_login_username=?, portal_pwd=?, portal_pwd_status=0 WHERE pid=?", $query_parameters);
+            sqlStatementNoLog("UPDATE patient_access_onsite SET portal_username=?, portal_login_username=?, portal_pwd=?, portal_pwd_status=? WHERE pid=?", $query_parameters);
         } else {
-            sqlStatementNoLog("INSERT INTO patient_access_onsite SET portal_username=?,portal_login_username=?,portal_pwd=?,portal_pwd_status=0,pid=?", $query_parameters);
+            sqlStatementNoLog("INSERT INTO patient_access_onsite SET portal_username=?,portal_login_username=?,portal_pwd=?,portal_pwd_status=?,pid=?", $query_parameters);
         }
         $postUpdateEvent = new PortalCredentialsUpdatedEvent($pid);
         $postUpdateEvent->setUsername($updatedEvent->getUsername())
@@ -119,9 +138,9 @@ class PatientAccessOnsiteService
 
         return [
             'uname' => $updatedEvent->getUsername()
-            ,'login_uname' => $updatedEvent->getLoginUsername()
-            ,'pwd' => $clear_pass
-            ,'email_direct' => trim($trustedEmail['email_direct'])
+            , 'login_uname' => $updatedEvent->getLoginUsername()
+            , 'pwd' => $clear_pass
+            , 'email_direct' => trim($trustedEmail['email_direct'])
         ];
     }
 
@@ -131,14 +150,14 @@ class PatientAccessOnsiteService
         $fhirServerConfig = new ServerConfig();
         $data = [
             'portal_onsite_two_enable' => $GLOBALS['portal_onsite_two_enable']
-            ,'portal_onsite_two_address' => $GLOBALS['portal_onsite_two_address']
-            ,'enforce_signin_email' => $GLOBALS['enforce_signin_email']
-            ,'uname' => $username
-            ,'login_uname' => $loginUsername
-            ,'pwd' => $pwd
-            ,'email_direct' => trim($emailDirect)
-            ,'fhir_address' => $fhirServerConfig->getFhirUrl()
-            ,'fhir_requirements_address' => $fhirServerConfig->getFhir3rdPartyAppRequirementsDocument()
+            , 'portal_onsite_two_address' => $GLOBALS['portal_onsite_two_address']
+            , 'enforce_signin_email' => $GLOBALS['enforce_signin_email']
+            , 'uname' => $username
+            , 'login_uname' => $loginUsername
+            , 'pwd' => $pwd
+            , 'email_direct' => trim($emailDirect)
+            , 'fhir_address' => $fhirServerConfig->getFhirUrl()
+            , 'fhir_requirements_address' => $fhirServerConfig->getFhir3rdPartyAppRequirementsDocument()
         ];
 
         // we run the twigs through this filterTwigTemplateData function as we want module writers to be able to modify the passed
@@ -149,12 +168,12 @@ class PatientAccessOnsiteService
         if ($this->emailLogin($pid, $htmlMessage, $plainMessage, $this->twig)) {
             return [
                 'success' => true
-                ,'plainMessage' => $plainMessage
+                , 'plainMessage' => $plainMessage
             ];
         } else {
             return [
                 'success' => false
-                ,'plainMessage' => $plainMessage
+                , 'plainMessage' => $plainMessage
             ];
         }
     }
@@ -164,6 +183,7 @@ class PatientAccessOnsiteService
      * Takes in a twig template and data for a given patient pid and notifies module listeners that we are about to
      * render a twig template and let them modify the data.   Note we do NOT allow the module writer to change the template
      * name here.
+     *
      * @param $pid
      * @param $templateName
      * @param $data
@@ -193,7 +213,6 @@ class PatientAccessOnsiteService
 
     public function getUniqueTrustedUsernameForPid($pid)
     {
-
         $trustedEmail = $this->getTrustedEmailForPid($pid);
         $row = $this->getOnsiteCredentialsForPid($pid);
         $trustedUserName = $trustedEmail['email_direct'];
@@ -208,11 +227,8 @@ class PatientAccessOnsiteService
                 $trustedUserName = '';
             }
         }
-        if (
-            empty($GLOBALS['enforce_signin_email'])
-            && empty($row['portal_username'])
-        ) {
-            $trustedUserName = $row['fname'] . $row['id'];
+        if (empty($GLOBALS['use_email_for_portal_username'])) {
+            $trustedUserName = $row['fname'] . $row['lname'] . $row['id'];
         }
         return $trustedUserName;
     }
@@ -242,8 +258,8 @@ class PatientAccessOnsiteService
             $this->logger->debug(
                 "PatientAccessOnSiteService->emailLogin() Skipping email send",
                 ['hipaa_allowemail' => $patientData['hipaa_allowemail']
-                , 'email' => empty($patientData['email']) ? "email is empty" : "patient has email"
-                , 'GLOBALS[patient_reminder_sender_email]' => $GLOBALS['patient_reminder_sender_email']]
+                    , 'email' => empty($patientData['email']) ? "email is empty" : "patient has email"
+                    , 'GLOBALS[patient_reminder_sender_email]' => $GLOBALS['patient_reminder_sender_email']]
             );
             return false;
         }

@@ -22,6 +22,7 @@ namespace OpenEMR\Services\DocumentTemplates;
 use HTMLPurifier;
 use HTMLPurifier_Config;
 use RuntimeException;
+use OpenEMR\Common\Logging\SystemLogger;
 use OpenEMR\Services\VersionService;
 
 require_once($GLOBALS['srcdir'] . '/appointments.inc.php');
@@ -99,7 +100,7 @@ class DocumentTemplateRender
             // of format [{"name":"","value":"","type":""}] for PHP rendering.
             $jsData = json_decode($json_data, true);
             foreach ($jsData as $e) {
-                $formData[$e['name']] = $e['value'];
+                $formData[$e['name']] = $e['value'] ?? '';
             }
         }
         // test for new style directive replace for legacy.
@@ -109,8 +110,17 @@ class DocumentTemplateRender
         // purify html (and remove js)
         $isLegacy = stripos($template, 'portal_version') === false;
         $config = HTMLPurifier_Config::createDefault();
+        $purifyTempFile = $GLOBALS['temporary_files_dir'] . DIRECTORY_SEPARATOR . 'htmlpurifier';
+        if (
+            !file_exists($purifyTempFile) &&
+            !is_dir($purifyTempFile)
+        ) {
+            if (!mkdir($purifyTempFile)) {
+                (new SystemLogger())->error("Could not create directory ", [$purifyTempFile]);
+            }
+        }
+        $config->set('Cache.SerializerPath', $purifyTempFile);
         $config->set('Core.Encoding', 'UTF-8');
-        $config->set('CSS.AllowedProperties', '*');
         $purify = new HTMLPurifier($config);
         $edata = $purify->purify($template);
         // Purify escapes URIs.
@@ -149,15 +159,15 @@ class DocumentTemplateRender
 
             if ($this->keySearch($s, '{PatientSignature}')) {
                 $sigfld = '<script>page.presentPatientSignature=true;</script>';
-                $sigfld .= '<img class="signature bg-light m-1" name="patient_signature' . ++$this->signed_cnt . '" id="patientSignature" style="cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="patient-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['patient_signature' . $this->signed_cnt] ?? '') . '" />';
+                $sigfld .= '<img class="signature m-1" name="patient_signature' . ++$this->signed_cnt . '" id="patientSignature" style="background-color: white;cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="patient-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['patient_signature' . $this->signed_cnt] ?? '') . '" />';
                 $s = $this->keyReplace($s, $sigfld);
             } elseif ($this->keySearch($s, '{AdminSignature}')) {
                 $sigfld = '<script>page.presentAdminSignature=true;</script>';
-                $sigfld .= '<img class="signature bg-light m-1" name="admin_signature' . ++$this->signed_cnt . '" id="adminSignature" style="cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="admin-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['admin_signature' . $this->signed_cnt] ?? '') . '" />';
+                $sigfld .= '<img class="signature m-1" name="admin_signature' . ++$this->signed_cnt . '" id="adminSignature" style="background-color: white;cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="admin-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['admin_signature' . $this->signed_cnt] ?? '') . '" />';
                 $s = $this->keyReplace($s, $sigfld);
             } elseif ($this->keySearch($s, '{WitnessSignature}')) {
                 $sigfld = '<script>page.presentWitnessSignature=true;</script>';
-                $sigfld .= '<img class="signature bg-light m-1" name="witness_signature' . ++$this->signed_cnt . '" id="witnessSignature" style="cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="witness-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['witness_signature' . $this->signed_cnt] ?? '') . '" />';
+                $sigfld .= '<img class="signature m-1" name="witness_signature' . ++$this->signed_cnt . '" id="witnessSignature" style="background-color: white;cursor:pointer;color: red;vertical-align: middle;max-height: 65px;height: 65px !important;width: auto !important;" data-type="witness-signature" data-action="fetch_signature" alt="' . xla("Click in signature") . '" data-pid="' . attr((int)$this->pid) . '" data-user="' . attr($this->user) . '" src="' . attr($formData['witness_signature' . $this->signed_cnt] ?? '') . '" />';
                 $s = $this->keyReplace($s, $sigfld);
             } elseif ($this->keySearch($s, '{SignaturesRequired}')) {
                 $sigfld = '<script>page.signaturesRequired=true;var signMsg=' . xlj("A signature is required for this document. Please sign document where required") . ';</script>' . "\n";
@@ -165,8 +175,9 @@ class DocumentTemplateRender
             } elseif (preg_match('/^{(Questionnaire):(.*)}/', substr($s, $this->keyLocation), $matches)) {
                 $q_id = $matches[2];
                 $this->keyLength = strlen($matches[0]);
+                $src = $formData['encounterForm'] ?? '';
                 $sigfld = "<script>page.isFrameForm=1;page.isQuestionnaire=1;page.encounterFormName=" . js_escape($q_id) . "</script>";
-                $sigfld .= "<iframe id='encounterForm' class='questionnaires' style='height:100vh;width:100%;border:0;' src=''></iframe>";
+                $sigfld .= "<iframe id='encounterForm' class='questionnaires' style='height:100vh;width:100%;border:0;' src='" . attr($src) . "'></iframe>";
                 $s = $this->keyReplace($s, $sigfld);
             } elseif (preg_match('/^{(QuestionnaireURLLoinc)\|(.*)\|(.*)\|(.*)}/', substr($s, $this->keyLocation), $matches)) {
                 // deprecated 09/23/2022 Unsure this directive is useful!
@@ -211,8 +222,9 @@ class DocumentTemplateRender
             } elseif (preg_match('/^\{(EncounterForm):(\w+)\}/', substr($s, $this->keyLocation), $matches)) {
                 $formname = $matches[2];
                 $this->keyLength = strlen($matches[0]);
+                $src = $formData['encounterForm'] ?? '';
                 $sigfld = "<script>page.isFrameForm=1;page.encounterFormName=" . js_escape($formname) . "</script>";
-                $sigfld .= "<iframe id='encounterForm' class='lbfFrame' style='height:100vh;width:100%;border:0;'></iframe>";
+                $sigfld .= "<iframe id='encounterForm' class='lbfFrame' style='height:100vh;width:100%;border:0;' src='" . attr($src) . "'></iframe>";
                 $s = $this->keyReplace($s, $sigfld);
             } elseif (preg_match('/^\{(TextBox):([0-9][0-9])x([0-9][0-9][0-9])\}/', substr($s, $this->keyLocation), $matches)) {
                 $rows = $matches[2];
@@ -291,6 +303,38 @@ class DocumentTemplateRender
                 $sigfld .= '<label>' .
                     '<input class="tfuRadio mr-1" type="radio" ' . $false . ' name="tfradio' . $this->grp_cnt . '" value="False" />' . xlt("False") .
                     '</label>';
+                $sigfld .= '</span>';
+                $s = $this->keyReplace($s, $sigfld);
+            } elseif (preg_match('/^\{(RadioGroup):([\w\s]+)\}/', substr($s, $this->keyLocation), $matches)) {
+                // matches {RadioGroup:caption1_caption2_caption3}
+                $this->keyLength = 3 + strlen($matches[1]) + strlen($matches[2]);
+                $matchesArr = explode('_', $matches[2]);
+                $this->grp_cnt++;
+                $radioCount = -1;
+                $sigfld = '<div class="fcuGroup mx-1" id="group_radio' . $this->grp_cnt . '">';
+                foreach ($matchesArr as $buttonCaption) {
+                    $radioCount++;
+                    $checked = ($formData['group_radio' . $this->grp_cnt] ?? '') == attr($buttonCaption) ? "checked" : '';
+                    $sigfld .= '<div class="form-check mb-2">' . '<label class="form-check-label" for="group_radio' . $this->grp_cnt . '_' . $radioCount . '">' .
+                        '<input class="groupRadio form-check-input" type="radio" ' . $checked . ' name="group_radio' . $this->grp_cnt . '" value="' . attr($buttonCaption) . '" id="group_radio' . $this->grp_cnt . '_' . $radioCount . '" />' .
+                        xlt($buttonCaption) . '</label>' . '</div>';
+                }
+                $sigfld .= '</div>';
+                $s = $this->keyReplace($s, $sigfld);
+            } elseif (preg_match('/^\{(RadioGroupInline):([\w\s]+)\}/', substr($s, $this->keyLocation), $matches)) {
+                // matches {RadioGroupInline:caption1_caption2_caption3}
+                $this->keyLength = 3 + strlen($matches[1]) + strlen($matches[2]);
+                $matchesArr = explode('_', $matches[2]);
+                $this->grp_cnt++;
+                $radioCount = -1;
+                $sigfld = '<span class="fcuGroup d-inline-flex align-items-center mx-1" id="inline_radio' . $this->grp_cnt . '">';
+                foreach ($matchesArr as $buttonCaption) {
+                    $radioCount++;
+                    $checked = ($formData['inline_radio' . $this->grp_cnt] ?? '') == attr($buttonCaption) ? "checked" : '';
+                    $sigfld .= '<label class="mr-2 d-inline-flex align-items-center">' .
+                        '<input class="inline_radio mr-1" type="radio" ' . $checked . ' name="inline_radio' . $this->grp_cnt . '" value="' . attr($buttonCaption) . '" />' . xlt($buttonCaption) .
+                        '</label>';
+                }
                 $sigfld .= '</span>';
                 $s = $this->keyReplace($s, $sigfld);
             } elseif ($this->keySearch($s, '{PatientName}')) {

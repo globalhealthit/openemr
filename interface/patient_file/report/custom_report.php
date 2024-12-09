@@ -33,6 +33,7 @@ use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 use OpenEMR\MedicalDevice\MedicalDevice;
+use OpenEMR\Pdf\Config_Mpdf;
 use OpenEMR\Services\FacilityService;
 
 if (!AclMain::aclCheckCore('patients', 'pat_rep')) {
@@ -55,24 +56,12 @@ if ($PDF_FAX) {
 }
 
 if ($PDF_OUTPUT) {
-    $config_mpdf = array(
-        'tempDir' => $GLOBALS['MPDF_WRITE_DIR'],
-        'mode' => $GLOBALS['pdf_language'],
-        'format' => $GLOBALS['pdf_size'],
-        'default_font_size' => '9',
-        'default_font' => 'dejavusans',
-        'margin_left' => $GLOBALS['pdf_left_margin'],
-        'margin_right' => $GLOBALS['pdf_right_margin'],
-        'margin_top' => $GLOBALS['pdf_top_margin'] * 1.5,
-        'margin_bottom' => $GLOBALS['pdf_bottom_margin'] * 1.5,
-        'margin_header' => $GLOBALS['pdf_top_margin'],
-        'margin_footer' => $GLOBALS['pdf_bottom_margin'],
-        'orientation' => $GLOBALS['pdf_layout'],
-        'shrink_tables_to_fit' => 1,
-        'use_kwt' => true,
-        'autoScriptToLang' => true,
-        'keep_table_proportions' => true
-    );
+    $config_mpdf = Config_Mpdf::getConfigMpdf();
+    // special settings for patient custom report that are necessary for mpdf
+    $config_mpdf['margin_top'] = $config_mpdf['margin_top'] * 1.5;
+    $config_mpdf['margin_bottom'] = $config_mpdf['margin_bottom'] * 1.5;
+    $config_mpdf['margin_header'] = $GLOBALS['pdf_top_margin'];
+    $config_mpdf['margin_footer'] =  $GLOBALS['pdf_bottom_margin'];
     $pdf = new mPDF($config_mpdf);
     if ($_SESSION['language_direction'] == 'rtl') {
         $pdf->SetDirectionality('rtl');
@@ -793,9 +782,10 @@ function zip_content($source, $destination, $content = '', $create = true)
                                 echo "<div class='text encounter_form'>";
                                 echo "<h4>" . text(xl_form_title($formres["form_name"])) . "</h4>";
                             }
-
+                            if (!empty($dateres['date'])) {
                             // show the encounter's date
-                            echo "(" . text(oeFormatSDFT(strtotime($dateres["date"]))) . ") ";
+                                echo "(" . text(oeFormatSDFT(strtotime($dateres["date"]))) . ") ";
+                            }
                             if ($res[1] == 'newpatient') {
                                 // display the provider info
                                 echo ' ' . xlt('Provider') . ': ' . text(getProviderName(getProviderIdOfEncounter($form_encounter)));

@@ -21,6 +21,7 @@ require_once("$srcdir/options.inc.php");
 use OpenEMR\Common\Acl\AclMain;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Twig\TwigContainer;
+use OpenEMR\Common\Utils\FormatMoney;
 use OpenEMR\Core\Header;
 
 // gacl control
@@ -39,18 +40,6 @@ function ffescape($field)
 {
     $field = add_escape_custom($field);
     return trim($field);
-}
-
-// Format dollars for display.
-//
-function bucks($amount)
-{
-    if ($amount) {
-        $amount = oeFormatMoney($amount);
-        return $amount;
-    }
-
-    return '';
 }
 
 $alertmsg = '';
@@ -291,7 +280,7 @@ if ($fend > ($count ?? null)) {
 <head>
     <title><?php echo xlt("Codes"); ?></title>
 
-    <?php Header::setupHeader(['select2']); ?>
+    <?php Header::setupHeader(['jquery-ui', 'jquery-ui-base']); ?>
 
 <style>
     .ui-autocomplete {
@@ -303,32 +292,25 @@ if ($fend > ($count ?? null)) {
 </style>
     <script>
     <?php if ($institutional) { ?>
-    $(function () {
-        $(".revcode").select2({
-        ajax: {
-            url: "<?php echo $GLOBALS['web_root'] ?>/interface/billing/ub04_helpers.php",
-            dataType: 'json',
-            data: function(params) {
-                return {
-                  code_group: "revenue_code",
-                  term: params.term
-                };
-            },
-            processResults: function(data) {
-                return  {
-                    results: $.map(data, function(item, index) {
-                        return {
-                            text: item.label,
-                            id: index,
-                            value: item.value
-                        }
-                    })
-                };
-                return x;
-            },
-            cache: true
+    $( function() {
+        var cache = {};
+        $( ".revcode" ).autocomplete({
+            minLength: 1,
+            source: function( request, response ) {
+                var term = request.term;
+                request.code_group = "revenue_code";
+                if ( term in cache ) {
+                    response( cache[ term ] );
+                    return;
+                }
+                $.getJSON( "<?php echo $GLOBALS['web_root'] ?>/interface/billing/ub04_helpers.php", request, function( data, status, xhr ) {
+                    cache[ term ] = data;
+                    response( data );
+                });
             }
-        })
+        }).dblclick(function(event) {
+            $(this).autocomplete('search'," ");
+        });
     });
     <?php } ?>
 
@@ -554,7 +536,7 @@ if ($fend > ($count ?? null)) {
             <?php if ($mode == "modify") { ?>
                 <input type='text' size='6' class='form-control form-control-sm' name="revenue_code" readonly="readonly" value='<?php echo attr($revenue_code) ?>' />
             <?php } else { ?>
-                <select size='6' style='width:150px' class='form-control form-control-sm revcode' name="revenue_code" title='<?php echo xla('Type to search and select revenue code'); ?>' value='<?php echo attr($revenue_code) ?>'> </select>
+                <input type='text' size='6' class='form-control form-control-sm revcode' name="revenue_code" title='<?php echo xla('Type to search and select revenue code'); ?>' value='<?php echo attr($revenue_code) ?>'>
             <?php } ?>
           </div>
         <?php } ?>
@@ -783,7 +765,7 @@ if ($fend > ($count ?? null)) {
                 "p.pr_id = ? AND p.pr_selector = '' AND p.pr_level = lo.option_id " .
                 "WHERE lo.list_id = 'pricelevel' AND lo.activity = 1 ORDER BY lo.seq", array($iter['id']));
             while ($prow = sqlFetchArray($pres)) {
-                echo "<td class='text text-right'>" . text(bucks($prow['pr_price'])) . "</td>\n";
+                echo "<td class='text text-right'>" . text(FormatMoney::getBucks($prow['pr_price'])) . "</td>\n";
             }
 
             if ($thisauthwrite) {
