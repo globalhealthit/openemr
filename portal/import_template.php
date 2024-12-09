@@ -24,11 +24,8 @@ if (!(isset($GLOBALS['portal_onsite_two_enable'])) || !($GLOBALS['portal_onsite_
 }
 
 $authUploadTemplates = AclMain::aclCheckCore('admin', 'forms');
-
 $templateService = new DocumentTemplateService();
-
 $patient = json_decode($_POST['upload_pid'] ?? '');
-
 $template_content = null;
 
 if (($_POST['mode'] ?? null) === 'save_profiles') {
@@ -329,29 +326,29 @@ function renderEditorHtml($template_id, $content)
     global $authUploadTemplates;
 
     $lists = [
-        '{ParseAsHTML}', '{ParseAsText}', '{styleBlockStart}', '{styleBlockEnd}', '{SignaturesRequired}', '{TextInput}', '{sizedTextInput:120px}', '{smTextInput}', '{TextBox:03x080}', '{CheckMark}', '{ynRadioGroup}', '{TrueFalseRadioGroup}', '{DatePicker}', '{DateTimePicker}', '{StandardDatePicker}', '{CurrentDate:"global"}', '{CurrentTime}', '{DOS}', '{ReferringDOC}', '{PatientID}', '{PatientName}', '{PatientSex}', '{PatientDOB}', '{PatientPhone}', '{Address}', '{City}', '{State}', '{Zip}', '{PatientSignature}', '{AdminSignature}', '{WitnessSignature}', '{AcknowledgePdf:pdf name or id:title}', '{EncounterForm:LBF}', '{Questionnaire:name or id}', '{Medications}', '{ProblemList}', '{Allergies}', '{ChiefComplaint}', '{DEM: }', '{HIS: }', '{LBF: }', '{GRP}{/GRP}'
+        '{ParseAsHTML}', '{ParseAsText}', '{styleBlockStart}', '{styleBlockEnd}', '{SignaturesRequired}', '{TextInput}', '{sizedTextInput:120px}', '{smTextInput}', '{TextBox:03x080}', '{CheckMark}', '{RadioGroup:option1_many...}', '{RadioGroupInline:option1_many...}', '{ynRadioGroup}', '{TrueFalseRadioGroup}', '{DatePicker}', '{DateTimePicker}', '{StandardDatePicker}', '{CurrentDate:"global"}', '{CurrentTime}', '{DOS}', '{ReferringDOC}', '{PatientID}', '{PatientName}', '{PatientSex}', '{PatientDOB}', '{PatientPhone}', '{Address}', '{City}', '{State}', '{Zip}', '{PatientSignature}', '{AdminSignature}', '{WitnessSignature}', '{AcknowledgePdf:pdf name or id:title}', '{EncounterForm:LBF}', '{Questionnaire:name or id}', '{Medications}', '{ProblemList}', '{Allergies}', '{ChiefComplaint}', '{DEM: }', '{HIS: }', '{LBF: }', '{GRP}{/GRP}'
     ];
     ?>
     <!DOCTYPE html>
     <html>
     <head>
-        <?php Header::setupHeader(['ckeditor']); ?>
+        <?php Header::setupHeader(['summernote']); ?>
     </head>
     <style>
-      input:focus,
-      input:active {
-        outline: 0 !important;
-        -webkit-appearance: none;
-        box-shadow: none !important;
-      }
+        input:focus,
+        input:active {
+            outline: 0 !important;
+            -webkit-appearance: none;
+            box-shadow: none !important;
+        }
 
-      .list-group-item {
-        font-size: .9rem;
-      }
+        .list-group-item {
+            font-size: .9rem;
+        }
 
-      .cke_contents {
-        height: 78vh !important;
-      }
+        .note-editable {
+            height: 78vh !important;
+        }
     </style>
     <body>
         <div class="container-fluid">
@@ -406,28 +403,23 @@ function renderEditorHtml($template_id, $content)
                     input.select();
                 })
             })
-            editor = CKEDITOR.instances['templateContent'];
-            if (editor) {
-                editor.destroy(true);
-            }
-            CKEDITOR.disableAutoInline = true;
-            CKEDITOR.config.extraPlugins = "preview,save,docprops,justify";
-            CKEDITOR.config.allowedContent = true;
-            //CKEDITOR.config.fullPage = true;
-            CKEDITOR.config.height = height;
-            CKEDITOR.config.width = '100%';
-            CKEDITOR.config.resize_dir = 'both';
-            CKEDITOR.config.resize_minHeight = max / 2;
-            CKEDITOR.config.resize_maxHeight = max;
-            CKEDITOR.config.resize_minWidth = '50%';
-            CKEDITOR.config.resize_maxWidth = '100%';
-            CKEDITOR.config.enterMode = CKEDITOR.ENTER_BR;
-            CKEDITOR.config.shiftEnterMode = CKEDITOR.ENTER_P;
-            CKEDITOR.config.autoParagraph = false;
-            editor = CKEDITOR.replace('templateContent', {
-                removeButtons: 'PasteFromWord'
+        });
+        $(function () {
+            $('#templateContent').summernote({
+                placeholder: 'Start typing here...',
+                height: 550,
+                minHeight: 300,
+                maxHeight: 800,
+                width: '100%',
+                tabsize: 4,
+                focus: true,
+                disableDragAndDrop: true,
+                dialogsInBody: true,
+                dialogsFade: true
             });
         });
+    </script>
+    <script>
     </script>
     </html>
 <?php }
@@ -454,23 +446,27 @@ function renderProfileHtml()
         <?php } ?>
     </head>
     <style>
-      body {
-        overflow: hidden;
-      }
+        body {
+            overflow: hidden;
+        }
 
-      .list-group-item {
-        cursor: move;
-      }
+        .list-group-item {
+            cursor: move;
+        }
 
-      strong {
-        font-weight: 600;
-      }
+        strong {
+            font-weight: 600;
+        }
 
-      .col-height {
-        max-height: 95vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
+        .col-height {
+            max-height: 95vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .note-editor.dragover .note-dropzone {
+            display: none
+        }
     </style>
     <script>
         const profiles = <?php echo js_escape($profile_list); ?>;
@@ -517,6 +513,7 @@ function renderProfileHtml()
             });
         });
         top.restoreSession();
+
         function submitProfiles() {
             top.restoreSession();
             let target = document.getElementById('edit-profiles');
@@ -590,19 +587,24 @@ function renderProfileHtml()
                                         continue;
                                     }
                                     /* The drag container */
-                                    echo "<li class='list-group-item px-1 py-1 mb-2 bg-primary' data-id='$template_id' data-name='$this_name' data-category='$title_esc'>" .
+                                    echo "<li class='list-group-item px-1 py-1 mb-1 bg-primary' data-id='$template_id' data-name='$this_name' data-category='$title_esc'>" .
                                         "<strong>" . text($file['template_name']) .
                                         '</strong>' . ' ' . xlt('in category') . ' ' .
                                         '<strong>' . text($title) . '</strong>';
                                     ?>
                                     <form class='form form-inline bg-light text-dark py-1 pl-1 d-none'>
-                                        <label class='font-weight-bold mr-1'><?php echo xlt('Notify') ?></label>
-                                        <div class='input-group-sm input-group-prepend ml-auto'>
+                                        <div class='input-group-sm input-group-prepend'>
+                                            <label class="form-check-inline d-none"><?php echo xlt('OneTime') ?>
+                                                <input name="onetimeIsOkay" type='checkbox' class="input-control-sm ml-1 mt-1" title="<?php echo xla('Enable Auto Portal log in for presenting document to patient.') ?>" />
+                                            </label>
+                                        </div>
+                                        <label class='font-weight-bold mr-1 d-none'><?php echo xlt('Notify') ?></label>
+                                        <div class='input-group-sm input-group-prepend d-none'>
                                             <input name="notify_days" type="text" style="width: 50px;" class='input-control-sm ml-1' placeholder="<?php echo xla('days') ?>" value="" />
                                             <label class="mx-1"><?php echo xlt('Days') ?></label>
                                         </div>
                                         <div class='input-group-sm input-group-prepend'>
-                                            <select name="notify_when" class='input-control-sm mx-1'>
+                                            <select name="notify_when" class='input-control-sm mx-1 d-none'>
                                                 <option value=""><?php echo xlt('Unassigned'); ?></option>
                                                 <option value="new"><?php echo xlt('New'); ?></option>
                                                 <option value='before_appointment'><?php echo xlt('Before Appointment'); ?></option>
@@ -611,7 +613,7 @@ function renderProfileHtml()
                                                 <option value="in_edit"><?php echo xlt('In Edit'); ?></option>
                                             </select>
                                         </div>
-                                        <div class='input-group-sm input-group-prepend ml-auto'>
+                                        <div class='input-group-sm input-group-prepend'>
                                             <label class="form-check-inline"><?php echo xlt('Recurring') ?>
                                                 <input name="recurring" type='checkbox' class="input-control-sm ml-1 mt-1" />
                                             </label>
@@ -646,7 +648,7 @@ function renderProfileHtml()
                             $profile_items_list = $templateService->getTemplateListByProfile($profile);
                             $profile_esc = attr($profile);
                             ?>
-                            <div class='bg-dark text-light py-1 pl-1'><?php echo xlt($profiles['title']) ?></div>
+                            <div class='bg-dark text-light mb-1 py-1 pl-1'><?php echo xlt($profiles['title']) ?></div>
                             <?php
                             echo "<ul id='$profile_esc' class='list-group mx-2 mb-2' data-profile='$profile_esc'>\n";
                             foreach ($profile_items_list as $cat => $files) {
@@ -668,14 +670,21 @@ function renderProfileHtml()
                                         continue;
                                     }
                                     ?>
-                                    <li class='list-group-item bg-info px-1 py-1 mb-2' data-id="<?php echo $template_id; ?>" data-name="<?php echo $this_name; ?>" data-category="<?php echo $this_cat; ?>"><span class="p-1 font-weight-bold"><?php echo text($file['template_name']) . ' ' . xlt('in category') . ' ' . text($title); ?></span>
+                                    <li class='list-group-item bg-warning text-light px-1 py-1 mb-1' data-id="<?php echo $template_id; ?>" data-name="<?php echo $this_name; ?>" data-category="<?php echo $this_cat; ?>">
+                                        <span class="p-1 font-weight-bold"><?php echo text($file['template_name']) . ' ' . xlt('in category') . ' ' . text($title); ?></span>
+                                        <!-- Notice! The notify event input is patched out until I get around to it. -->
                                         <form class='form form-inline bg-light text-dark py-1 pl-1'>
-                                            <label class='font-weight-bold mr-1'><?php echo xlt('Notify') ?></label>
-                                            <div class='input-group-sm input-group-prepend'>
+                                            <div class='input-group-sm input-group-prepend d-none'>
+                                                <label class="form-check-inline"><?php echo xlt('OneTime') ?>
+                                                    <input name="onetimeIsOkay" type='checkbox' class="input-control-sm ml-1 mt-1" title="<?php echo xla('Enable Auto Portal log in for presenting document to patient.') ?>" />
+                                                </label>
+                                            </div>
+                                            <label class='font-weight-bold mr-1 d-none'><?php echo xlt('Notify') ?></label>
+                                            <div class='input-group-sm input-group-prepend d-none'>
                                                 <input name="notify_days" type="text" style="width: 50px;" class='input-control-sm ml-1' placeholder="<?php echo xla('days') ?>" value="<?php echo $notify_days ?>" />
                                                 <label class="mx-1"><?php echo xlt('Days') ?></label>
                                             </div>
-                                            <div class='input-group-sm input-group-prepend'>
+                                            <div class='input-group-sm input-group-prepend d-none'>
                                                 <select name="notify_when" class='input-control-sm mx-1'>
                                                     <option value=""><?php echo xlt('Unassigned'); ?></option>
                                                     <option <?php echo $notify_trigger === 'new' ? 'selected' : ''; ?> value="new"><?php echo xlt('New'); ?></option>

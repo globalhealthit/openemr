@@ -129,6 +129,14 @@ function submitform() {
         }
 
     }//If pwd null ends here
+
+    // Valiate Google email address (if provided)
+    if(document.forms[0].google_signin_email.value != "" && !isValidEmail(document.forms[0].google_signin_email.value)) {
+        flag=1;
+        alert(<?php echo xlj('Google email provided is invalid/not properly formatted (e.g. first.last@gmail.com)') ?>);
+        return false;
+    }
+
 <?php } ?>
   if (document.forms[0].access_group_id) {
     var sel = getSelected(document.forms[0].access_group_id.options);
@@ -350,6 +358,10 @@ if ($iter["portal_user"]) {
 
 <TR>
 <td><span class=text><?php echo xlt('Last Name'); ?>: </span></td><td><input type="text" name=lname id=lname style="width:150px;"  class="form-control" value="<?php echo attr($iter["lname"]); ?>"><span class="mandatory"></span></td>
+<td><span class=text><?php echo xlt('Suffix'); ?>: </span></td><td><input type="text" name=suffix id=suffix style="width:150px;"  class="form-control" value="<?php echo attr($iter["suffix"]); ?>"></td>
+</tr>
+<tr>
+<td><span class=text><?php echo xlt('Valedictory'); ?>: </span></td><td><input type="text" name=valedictory id=valedictory style="width:150px;"  class="form-control" value="<?php echo attr($iter["valedictory"]); ?>"></td>
 <td><span class=text><?php echo xlt('Default Facility'); ?>: </span></td><td><select name=facility_id style="width:150px;" class="form-control">
 <?php
 $fres = $facilityService->getAllServiceLocations();
@@ -368,6 +380,7 @@ if ($fres) {
 }
 ?>
 </select></td>
+
 </tr>
 
 <?php if ($GLOBALS['restrict_user_facility']) { ?>
@@ -461,7 +474,7 @@ foreach (array(1 => xl('None{{Authorization}}'), 2 => xl('Only Mine'), 3 => xl('
 </td>
 </tr>
 <tr>
-<td><span class="text"><?php echo xlt('Weno Provider ID'); ?>: </span></td><td><input type="text" name="erxprid" style="width:150px;" class="form-control" value="<?php echo attr($iter["weno_prov_id"]); ?>"></td>
+<td><span class="text"><?php echo xlt('Weno User ID'); ?>: </span></td><td><input type="text" name="erxprid" style="width:150px;" class="form-control" value="<?php echo attr($iter["weno_prov_id"]); ?>"></td>
 <td><span class="text"><?php echo xlt('Google Email for Login'); ?>: </span></td><td><input type="text" name="google_signin_email" style="width:150px;" class="form-control" value="<?php echo attr($iter["google_signin_email"]); ?>"></td>
 </tr>
 

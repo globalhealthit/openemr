@@ -94,7 +94,7 @@ class UtilsService
             if (class_exists($resourceClassCheck)) {
                 $parsed_url['resource'] = $resource;
                 $parsed_url['uuid'] = $uuid;
-            } else if (class_exists($idClassCheck)) {
+            } elseif (class_exists($idClassCheck)) {
                 $parsed_url['resource'] = $uuid; // root level resource at the end
             }
         }
@@ -158,6 +158,17 @@ class UtilsService
         $outerExtension = new FHIRExtension();
         $outerExtension->addExtension($extension);
         return $outerExtension;
+    }
+
+    public static function getExtensionsByUrl($url, $object)
+    {
+        if (method_exists($object, 'getExtension')) {
+            $extensions = $object->getExtension();
+            return array_filter($extensions, function ($extension) use ($url) {
+                return $extension->getUrl() == $url;
+            });
+        }
+        return [];
     }
 
     public static function createContactPoint($value, $system, $use): FHIRContactPoint
@@ -348,6 +359,20 @@ class UtilsService
     public static function getDateFormattedAsUTC(): string
     {
         return (new \DateTime())->format(DATE_ATOM);
+    }
+
+    public static function getLocalTimestampAsUTCDate($date)
+    {
+        // make this assumption explicit that we are using the current timezone specified in PHP
+        // when we use strtotime or gmdate we get bad behavior when dealing with DST
+        // we really should be storing dates internally as UTC instead of local time... but until that happens we have
+        // to do this.
+        // note this is what we were using before
+        // $date = gmdate('c', strtotime($dataRecord['date']));
+        // w/ DST the date 2015-06-22 00:00:00 server time becomes 2015-06-22T04:00:00+00:00 w/o DST the server time becomes 2015-06-22T00:00:00-04:00
+        $date = new \DateTime("@" . $date, new \DateTimeZone(date('P')));
+        $utcDate = $date->format(DATE_ATOM);
+        return $utcDate;
     }
 
     public static function getLocalDateAsUTC($date)

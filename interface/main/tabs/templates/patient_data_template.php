@@ -63,6 +63,7 @@ switch ($search_any_type) {
                 <!-- ko if: patient -->
                 <?php
                 $classes = "";
+                $closeAnchorClasses = '';
                 switch ($GLOBALS['patient_name_display']) :
                     case 'btn':
                         $classes = "btn btn-sm btn-secondary";
@@ -192,7 +193,7 @@ switch ($search_any_type) {
                 <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="portalMsgAlerts">
                     <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewPortalMail">
-                            <i class="fa fa-envelope-o"></i>&nbsp;<?php echo xlt("Portal Mail"); ?>&nbsp;
+                            <i class="fa fa-envelope"></i>&nbsp;<?php echo xlt("Portal Mail"); ?>&nbsp;
                             <span class="badge badge-success" style="display:inline" data-bind="text: portalMail()"></span>
                         </a>
                     </li>
@@ -205,15 +206,8 @@ switch ($search_any_type) {
                     </li>
                     <li class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item" href="#" data-bind="click: viewPortalChats">
-                            <i class="fa fa-envelope"></i>&nbsp;<?php echo xlt("Portal Chats"); ?>&nbsp;
-                            <span class="badge badge-success" style="display:inline" data-bind="text: portalChats()"></span>
-                        </a>
-                    </li>
-                    <li class="dropdown-divider"></li>
-                    <li>
                         <a class="dropdown-item" href="#" data-bind="click: viewPortalPayments">
-                            <i class="fa fa-envelope"></i>&nbsp;<?php echo xlt("Portal Payments"); ?>&nbsp;<span class="badge badge-success" style="display:inline" data-bind="text: portalPayments()"></span>
+                            <i class="fa fa-credit-card"></i>&nbsp;<?php echo xlt("Portal Payments"); ?>&nbsp;<span class="badge badge-success" style="display:inline" data-bind="text: portalPayments()"></span>
                         </a>
                     </li>
                 </ul>

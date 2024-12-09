@@ -33,11 +33,6 @@ if ($GLOBALS['enable_group_therapy']) {
     require_once("$srcdir/group.inc.php");
 }
 
-$months = array("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12");
-$days = array("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31");
-$thisyear = date("Y");
-$years = array($thisyear - 1, $thisyear, $thisyear + 1, $thisyear + 2);
-
 $mode = (!empty($_GET['mode'])) ? $_GET['mode'] : null;
 
 $viewmode = false;
@@ -122,7 +117,7 @@ function getFacilityList()
     $facilities = $facilityService->getAllServiceLocations();
     $results = [];
     foreach ($facilities as $iter) {
-        $posCode = (($def_facility === $iter['id']) && !$viewmode) ? $iter['pos_code'] : $posCode;
+        $posCode = ((int) $def_facility === (int) $iter['id'] && !$viewmode) ? $iter['pos_code'] : $posCode;
 
         $results[] = [
             'id' => $iter['id'],
@@ -507,6 +502,102 @@ $ires = sqlStatement("SELECT id, type, title, begdate FROM lists WHERE " .
                             </div>
                         <?php endif; ?>
                     </div>
+
+                    <div class="form-row align-items-center">
+                        <div class="col-sm">
+                            <div class="form-group">
+                                <label for='provider_id' class="text-right"><?php echo xlt('Encounter Provider'); ?>:</label>
+                                <select name='provider_id' id='provider_id' class='form-control' onChange="newUserSelected()">
+                                    <?php
+                                    if ($viewmode) {
+                                        $provider_id = $result['provider_id'];
+                                    }
+                                    $userService = new UserService();
+                                    $users = $userService->getActiveUsers();
+                                    foreach ($users as $activeUser) {
+                                        $p_id = (int)$activeUser['id'];
+                                        // Check for the case where an encounter is created by non-auth user
+                                        // but has permissions to create/edit encounter.
+                                        $flag_it = "";
+                                        if ($activeUser['authorized'] != 1) {
+                                            if ($p_id === (int)($result['provider_id'] ?? null)) {
+                                                $flag_it = " (" . xlt("Non Provider") . ")";
+                                            } else {
+                                                continue;
+                                            }
+                                        }
+                                        echo "<option value='" . attr($p_id) . "'";
+                                        if ((int)$provider_id === $p_id) {
+                                            echo "selected";
+                                        }
+                                        echo ">" . text($activeUser['lname']) . ', ' .
+                                            ($activeUser['suffix'] ? text($activeUser['suffix']) . ', ' : '') .
+                                            ($activeUser['valedictory'] ? text($activeUser['valedictory']) . ', ' : '') .
+                                            text($activeUser['fname']) .
+                                            ($activeUser['mname'] ? ', ' . text($activeUser['mname']) : ' ') .
+                                            $flag_it . "</option>\n";
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm <?php displayOption('enc_enable_referring_provider');?>">
+                            <div class="form-group">
+                                <label for='referring_provider_id' class="text-right"><?php echo xlt('Referring Provider'); ?>:</label>
+                                <?php
+                                if ($viewmode && !empty($result["referring_provider_id"])) {
+                                    $MBO->genReferringProviderSelect('referring_provider_id', '-- ' . xl("Please Select") . ' --', $result["referring_provider_id"]);
+                                } else { // defalut to the patient's referring provider from Demographics->Choices
+                                    $MBO->genReferringProviderSelect('referring_provider_id', '-- ' . xl("Please Select") . ' --', getPatientData($pid, "ref_providerID")['ref_providerID']);
+                                } ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm <?php displayOption('enc_enable_ordering_provider');?>">
+                            <div class="form-group">
+                                <label for='ordering_provider_id' class="text-right"><?php echo xlt('Ordering Provider'); ?>:</label>
+                                <?php
+                                    $MBO->genOrderingProviderSelect('ordering_provider_id', '-- ' . xl("Please Select") . ' --', $result["ordering_provider_id"] ?? '');
+                                ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm <?php displayOption('enc_enable_facility'); ?>">
+                            <div class="form-group">
+                                <label for='facility_id_sel' class="text-right"><?php echo xlt('Facility'); ?>:</label>
+                                <select name='facility_id_sel' id='facility_id_sel' class='form-control' <?php echo ($mode === "followup") ? 'disabled' : ''; ?> >
+                                    <?php
+                                    $fac = getFacilityList();
+                                    foreach ($fac as $f) : ?>
+                                        <option value="<?php echo attr($f['id']); ?>" <?php echo ($f['selected'] == true) ? 'selected' : '';?>><?php echo text($f['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm <?php echo ($GLOBALS['hide_billing_widget'] != 1) ?: 'd-none'; ?>">
+                            <div class="form-group">
+                                <label for='billing_facility' class="text-right"><?php echo xlt('Billing Facility'); ?>:</label>
+                                <?php
+                                if (!empty($default_bill_fac_override)) {
+                                    $default_bill_fac = $default_bill_fac_override;
+                                } elseif (!$viewmode && $mode !== "followup") {
+                                    if ($user_facility['billing_location'] == '1') {
+                                        $default_bill_fac =  $user_facility['id'] ;
+                                    } else {
+                                        $tmp_be = $facilityService->getPrimaryBusinessEntity();
+                                        $tmp_bl =  $facilityService->getPrimaryBillingLocation();
+                                        $tmp = !empty($tmp_be['id']) ? $tmp_be['id'] : (!empty($tmp_bl['id']) ? $tmp_bl['id'] : null);
+                                        $default_bill_fac = !empty($tmp) ? $tmp : $def_facility;
+                                    }
+                                } else {
+                                    $default_bill_fac = isset($result['billing_facility']) ? $result['billing_facility'] : $def_facility;
+                                }
+                                billing_facility('billing_facility', $default_bill_fac);
+                                ?>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-row align-items-center">
                         <div class="col-sm <?php displayOption('enc_service_date');?>">
                             <div class="form-group">
@@ -547,7 +638,8 @@ $ires = sqlStatement("SELECT id, type, title, begdate FROM lists WHERE " .
                                 </select>
                             </div>
                         </div>
-                        <div class="col-sm <?php echo ($GLOBALS['hide_billing_widget'] != 1) ?: 'd-none';?>">
+                        <?php $collectionDisplay = ($GLOBALS['hide_billing_widget'] == 1) ? 'd-none' : displayOption('enc_in_collection'); ?>
+                        <div class="col-sm <?php echo $collectionDisplay; ?>">
                             <div class="form-group">
                                 <label for='in_collection' class="text-right"><?php echo xlt('In Collection'); ?>:</label>
                                 <select class='form-control' name='in_collection' id='in_collection'>
@@ -558,87 +650,6 @@ $ires = sqlStatement("SELECT id, type, title, begdate FROM lists WHERE " .
                         </div>
                     </div>
 
-                    <div class="form-row align-items-center">
-                        <div class="col-sm">
-                            <div class="form-group">
-                                <label for='provider_id' class="text-right"><?php echo xlt('Encounter Provider'); ?>:</label>
-                                <select name='provider_id' id='provider_id' class='form-control' onChange="newUserSelected()">
-                                    <?php
-                                    if ($viewmode) {
-                                        $provider_id = $result['provider_id'];
-                                    }
-                                    $userService = new UserService();
-                                    $users = $userService->getActiveUsers();
-                                    foreach ($users as $activeUser) {
-                                        $p_id = (int)$activeUser['id'];
-                                        // Check for the case where an encounter is created by non-auth user
-                                        // but has permissions to create/edit encounter.
-                                        $flag_it = "";
-                                        if ($activeUser['authorized'] != 1) {
-                                            if ($p_id === (int)($result['provider_id'] ?? null)) {
-                                                $flag_it = " (" . xlt("Non Provider") . ")";
-                                            } else {
-                                                continue;
-                                            }
-                                        }
-                                        echo "<option value='" . attr($p_id) . "'";
-                                        if ((int)$provider_id === $p_id) {
-                                            echo "selected";
-                                        }
-                                        echo ">" . text($activeUser['lname']) . ' ' .
-                                            text($activeUser['fname']) . ' ' . text($activeUser['mname']) . $flag_it . "</option>\n";
-                                    }
-                                    ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-sm <?php displayOption('enc_enable_referring_provider');?>">
-                            <div class="form-group">
-                                <label for='referring_provider_id' class="text-right"><?php echo xlt('Referring Provider'); ?>:</label>
-                                <?php
-                                if ($viewmode && !empty($result["referring_provider_id"])) {
-                                    $MBO->genReferringProviderSelect('referring_provider_id', '-- ' . xl("Please Select") . ' --', $result["referring_provider_id"]);
-                                } else { // defalut to the patient's referring provider from Demographics->Choices
-                                    $MBO->genReferringProviderSelect('referring_provider_id', '-- ' . xl("Please Select") . ' --', getPatientData($pid, "ref_providerID")['ref_providerID']);
-                                } ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-sm <?php displayOption('enc_enable_facility'); ?>">
-                            <div class="form-group">
-                                <label for='facility_id_sel' class="text-right"><?php echo xlt('Facility'); ?>:</label>
-                                <select name='facility_id_sel' id='facility_id_sel' class='form-control' <?php echo ($mode === "followup") ? 'disabled' : ''; ?> >
-                                    <?php
-                                    $fac = getFacilityList();
-                                    foreach ($fac as $f) : ?>
-                                        <option value="<?php echo attr($f['id']); ?>" <?php echo ($f['selected'] == true) ? 'selected' : '';?>><?php echo text($f['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-sm <?php echo ($GLOBALS['hide_billing_widget'] != 1) ?: 'd-none'; ?>">
-                            <div class="form-group">
-                                <label for='billing_facility' class="text-right"><?php echo xlt('Billing Facility'); ?>:</label>
-                                <?php
-                                if (!empty($default_bill_fac_override)) {
-                                    $default_bill_fac = $default_bill_fac_override;
-                                } elseif (!$viewmode && $mode !== "followup") {
-                                    if ($user_facility['billing_location'] == '1') {
-                                        $default_bill_fac =  $user_facility['id'] ;
-                                    } else {
-                                        $tmp_be = $facilityService->getPrimaryBusinessEntity();
-                                        $tmp_bl =  $facilityService->getPrimaryBillingLocation();
-                                        $tmp = !empty($tmp_be['id']) ? $tmp_be['id'] : (!empty($tmp_bl['id']) ? $tmp_bl['id'] : null);
-                                        $default_bill_fac = !empty($tmp) ? $tmp : $def_facility;
-                                    }
-                                } else {
-                                    $default_bill_fac = isset($result['billing_facility']) ? $result['billing_facility'] : $def_facility;
-                                }
-                                billing_facility('billing_facility', $default_bill_fac);
-                                ?>
-                            </div>
-                        </div>
-                    </div>
                     <div class="form-row align-items-center">
                         <!-- Discharge Disposition -->
                         <div class="col-sm <?php displayOption('enc_enable_discharge_disposition'); ?>">
@@ -744,7 +755,7 @@ $ires = sqlStatement("SELECT id, type, title, begdate FROM lists WHERE " .
                     <div class="btn-group" role="group">
                         <?php $link_submit = ($viewmode || empty($_GET['autoloaded'])) ? '' : 'link_submit';
                               $cancel_clicked = ($viewmode) ? 'cancelClickedOld()' : 'cancelClickedNew()';?>
-                        <button type="button" class="btn btn-primary btn-save" onclick="top.restoreSession(); saveClicked(undefined);"><?php echo xlt('Save'); ?></button>
+                        <button type="button" id="saveEncounter" class="btn btn-primary btn-save" onclick="top.restoreSession(); saveClicked(undefined);"><?php echo xlt('Save'); ?></button>
                         <button type="button" class="btn btn-cancel <?php echo $link_submit;?>" onClick="return <?php echo $cancel_clicked;?>"><?php echo xlt('Cancel'); ?></button>
                     </div>
                 </div>

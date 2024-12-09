@@ -117,6 +117,12 @@ function submitform() {
         }
     } //secure_pwd if ends here
 
+    // Valiate Google email (if provided)
+    if(document.new_user.google_signin_email.value != "" && !isValidEmail(document.new_user.google_signin_email.value)) {
+        alert(<?php echo xlj('Google email provided is invalid/not properly formatted (e.g. first.last@gmail.com)') ?>);
+        return false;
+    }
+
     <?php if ($GLOBALS['erx_enable']) { ?>
    alertMsg='';
    f=document.forms[0];
@@ -237,7 +243,18 @@ function authorized_clicked() {
 <tr>
 <td style="width:150px;"><span class="text"><?php echo xlt('Username'); ?>: </span></td><td style="width:220px;"><input type="text" name="rumple" style="width:120px;" class="form-control"><span class="mandatory"></span></td>
 <?php if (empty($GLOBALS['gbl_ldap_enabled']) || empty($GLOBALS['gbl_ldap_exclusions'])) { ?>
-<td style="width:150px;"><span class="text"><?php echo xlt('Password'); ?>: </span></td><td style="width:250px;"><input type="password" style="width:120px;" name="stiltskin" class="form-control"><span class="mandatory"></span></td>
+<td style="width:150px;">
+    <span class="text"><?php echo xlt('Password'); ?>:</span>
+</td>
+<td style="width:150px;">
+    <input type="password" style="width:120px;" name="stiltskin" id="stiltskin" class="form-control" onkeyup="checkPasswordStrength(this);">
+    <span class="mandatory"></span>
+    <!-- Password Strength Meter -->
+    <div id="password_strength_meter" class="progress mt-2">
+        <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+    <div id="password_strength_text"></div>
+</td>
 <?php } else { ?>
         <td><input type="hidden" value="124" name="stiltskin" /></td>
 <?php } ?>
@@ -278,6 +295,10 @@ foreach ($result2 as $iter) {
 </tr>
 <tr>
 <td><span class="text"><?php echo xlt('Last Name'); ?>: </span></td><td><input type="text" name='lname' id='lname' style="width:120px;" class="form-control"><span class="mandatory"></span></td>
+<td><span class=text><?php echo xlt('Suffix'); ?>: </span></td><td><input type="text" name=suffix id=suffix style="width:150px;"  class="form-control"></td>
+</tr>
+<tr>
+<td><span class=text><?php echo xlt('Valedictory'); ?>: </span></td><td><input type="text" name=valedictory id=valedictory style="width:150px;"  class="form-control"></td>
 <td><span class="text"><?php echo xlt('Default Facility'); ?>: </span></td>
 <td>
 <select style="width:120px;" name=facility_id class="form-control">
@@ -641,6 +662,7 @@ $(function () {
 
 });
 </script>
+
 <table>
 
 </table>

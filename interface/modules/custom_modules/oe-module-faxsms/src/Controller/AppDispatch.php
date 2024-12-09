@@ -6,7 +6,7 @@
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  * @author    Jerry Padgett <sjpadgett@gmail.com>
- * @copyright Copyright (c) 2018-2023 Jerry Padgett <sjpadgett@gmail.com>
+ * @copyright Copyright (c) 2018-2024 Jerry Padgett <sjpadgett@gmail.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General public License 3
  */
 
@@ -14,6 +14,7 @@ namespace OpenEMR\Modules\FaxSMS\Controller;
 
 use MyMailer;
 use OpenEMR\Common\Acl\AclMain;
+use OpenEMR\Common\Crypto\CryptoGen;
 use OpenEMR\Common\Session\SessionUtil;
 
 /**
@@ -25,11 +26,12 @@ abstract class AppDispatch
 {
     const ACTION_DEFAULT = 'index';
     static $_apiService;
-    static $_apiModule;
+    static mixed $_apiModule;
     public string $authErrorDefault;
     public static $timeZone;
     protected $crypto;
     protected $_currentAction;
+    protected $credentials;
     private $_request, $_response, $_query, $_post, $_server, $_cookies, $_session;
     private $authUser;
 
@@ -49,6 +51,8 @@ abstract class AppDispatch
         if (empty(self::$_apiModule)) {
             self::$_apiModule = $_REQUEST['type'] ?? $_SESSION["oefax_current_module_type"] ?? null;
         }
+        $this->crypto = new CryptoGen();
+        $this->credentials = $this->getCredentials();
         $this->dispatchActions();
         $this->render();
     }
@@ -214,11 +218,7 @@ abstract class AppDispatch
         self::$_apiModule = $type;
     }
 
-    /**
-     * @param $type
-     * @return EtherFaxActions|RCFaxClient|TwilioSMSClient|void
-     */
-    private static function getServiceInstance($type)
+    static function getServiceInstance($type)
     {
         $s = self::getServiceType();
         if ($type == 'sms') {
@@ -226,20 +226,29 @@ abstract class AppDispatch
                 case 0:
                     break;
                 case 1:
-                    // for new service in future
+                    return new RCFaxClient();
                     break;
                 case 2:
                     return new TwilioSMSClient();
+                case 5:
+                    return new ClickatellSMSClient();
             }
         } elseif ($type == 'fax') {
             switch ($s) {
                 case 0:
                     break;
                 case 1:
-                    // for new service in future
+                    return new RCFaxClient();
                     break;
                 case 3:
                     return new EtherFaxActions();
+            }
+        } elseif ($type == 'email') {
+            switch ($s) {
+                case 0:
+                    break;
+                case 4:
+                    return new EmailClient();
             }
         }
 
@@ -264,6 +273,9 @@ abstract class AppDispatch
         if (self::$_apiModule == 'fax') {
             return $GLOBALS['oefax_enable_fax'] ?? null;
         }
+        if (self::$_apiModule == 'email') {
+            return $GLOBALS['oe_enable_email'] ?? null;
+        }
 
         http_response_code(404);
         die(xlt("Requested") . ' ' . text(self::$_apiModule) . ' ' . xlt("service is not found.") . '<br />' . xlt("Install or turn service on!") . '<br />');
@@ -277,6 +289,8 @@ abstract class AppDispatch
         return self::$_apiModule;
     }
 
+    //abstract function faxProcessUploads();
+
     /**
      * @return string|bool
      */
@@ -286,6 +300,11 @@ abstract class AppDispatch
      * @return mixed
      */
     abstract function sendSMS(): mixed;
+
+    /**
+     * @return mixed
+     */
+    abstract function sendEmail(): mixed;
 
     /**
      * @return string|bool
@@ -342,14 +361,15 @@ abstract class AppDispatch
             $username = $this->getRequest('username');
             $ext = $this->getRequest('extension');
             $account = $this->getRequest('account');
-            $phone = $this->getRequest('phone');
+            $phone = $this->formatPhoneForSave($this->getRequest('phone'));
             $password = $this->getRequest('password');
             $appkey = $this->getRequest('key');
             $appsecret = $this->getRequest('secret');
             $production = $this->getRequest('production');
-            $smsNumber = $this->getRequest('smsnumber');
+            $smsNumber = $this->formatPhoneForSave($this->getRequest('smsnumber'));
             $smsMessage = $this->getRequest('smsmessage');
             $smsHours = $this->getRequest('smshours');
+            $jwt = $this->getRequest('jwt');
             $setup = array(
                 'username' => "$username",
                 'extension' => "$ext",
@@ -358,13 +378,14 @@ abstract class AppDispatch
                 'password' => "$password",
                 'appKey' => "$appkey",
                 'appSecret' => "$appsecret",
-                'server' => "",
-                'portal' => "",
+                'server' => !$production ? 'https://platform.devtest.ringcentral.com' : "https://platform.ringcentral.com",
+                'portal' => !$production ? "https://service.devtest.ringcentral.com/" : "https://service.ringcentral.com/",
                 'smsNumber' => "$smsNumber",
                 'production' => $production,
-                'redirect_url' => "",
+                'redirect_url' => $this->getRequest('redirect_url'),
                 'smsHours' => $smsHours,
-                'smsMessage' => $smsMessage
+                'smsMessage' => $smsMessage,
+                'jwt' => $jwt ?? '',
             );
         }
 
@@ -406,13 +427,68 @@ abstract class AppDispatch
     {
         switch ((string)self::getServiceType()) {
             case '1':
-                break;
+                return '_ringcentral';
             case '2':
                 return '_twilio';
             case '3':
                 return '_etherfax';
+            case '4':
+                return '_email';
+            case '5':
+                return '_clickatell';
         }
         return null;
+    }
+
+    public function getEmailSetup(): mixed
+    {
+        $vendor = '_email';
+        $this->authUser = (int)$this->getSession('authUserID');
+        if (!($GLOBALS['oerestrict_users'] ?? null)) {
+            $this->authUser = 0;
+        }
+        $credentials = sqlQuery("SELECT * FROM `module_faxsms_credentials` WHERE `auth_user` = ? AND `vendor` = ?", array($this->authUser, $vendor));
+
+        if (empty($credentials)) {
+            $credentials = array(
+                'sender_name' => $GLOBALS['patient_reminder_sender_name'],
+                'sender_email' => $GLOBALS['patient_reminder_sender_email'],
+                'notification_email' => $GLOBALS['practice_return_email_path'],
+                'email_transport' => $GLOBALS['EMAIL_METHOD'],
+                'smtp_host' => $GLOBALS['SMTP_HOST'],
+                'smtp_port' => $GLOBALS['SMTP_PORT'],
+                'smtp_user' => $GLOBALS['SMTP_USER'],
+                'smtp_password' => $GLOBALS['SMTP_PASS'],
+                'smtp_security' => $GLOBALS['SMTP_SECURE'],
+                'notification_hours' => $GLOBALS['EMAIL_NOTIFICATION_HOUR'],
+                'email_message' => $GLOBALS['EMAIL_MESSAGE'] ?? '',
+            );
+            if (empty($credentials['email_message'] ?? '')) {
+                $credentials['email_message'] = "A courtesy reminder for ***NAME*** \r\nFor the appointment scheduled on: ***DATE*** At: ***STARTTIME*** Until: ***ENDTIME*** \r\nWith: ***PROVIDER*** Of: ***ORG***\r\nPlease call if unable to attend.";
+            }
+            return $credentials;
+        } else {
+            $credentials = $credentials['credentials'];
+        }
+
+        $decrypt = $this->crypto->decryptStandard($credentials);
+        $credentials = json_decode($decrypt, true);
+        if (empty($credentials['email_message'] ?? '')) {
+            $credentials['email_message'] = "A courtesy reminder for ***NAME*** \r\nFor the appointment scheduled on: ***DATE*** At: ***STARTTIME*** Until: ***ENDTIME*** \r\nWith: ***PROVIDER*** Of: ***ORG***\r\nPlease call if unable to attend.";
+        }
+        return $credentials;
+    }
+
+    public function saveEmailSetup($credentials): void
+    {
+        $vendor = '_email';
+        $this->authUser = (int)$this->getSession('authUserID');
+        if (!($GLOBALS['oerestrict_users'] ?? null)) {
+            $this->authUser = 0;
+        }
+        $encoded = json_encode($credentials);
+        $encrypted = $this->crypto->encryptStandard($encoded);
+        sqlStatement("INSERT INTO `module_faxsms_credentials` (auth_user, vendor, credentials, updated) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE credentials = VALUES(credentials), updated = VALUES(updated)", array($this->authUser, $vendor, $encrypted));
     }
 
     /**
@@ -446,13 +522,19 @@ abstract class AppDispatch
                 'redirect_url' => '',
                 'smsHours' => "50",
                 'smsMessage' => "A courtesy reminder for ***NAME*** \r\nFor the appointment scheduled on: ***DATE*** At: ***STARTTIME*** Until: ***ENDTIME*** \r\nWith: ***PROVIDER*** Of: ***ORG***\r\nPlease call if unable to attend.",
+                'jwt' => '',
             );
             return $credentials;
         } else {
             $credentials = $credentials['credentials'];
         }
 
-        return json_decode($this->crypto->decryptStandard($credentials), true);
+        $decrypt = $this->crypto->decryptStandard($credentials);
+        $decode = json_decode($decrypt, true);
+        if (empty($decode['smsMessage'])) {
+            $decode['smsMessage'] = "A courtesy reminder for ***NAME*** \r\nFor the appointment scheduled on: ***DATE*** At: ***STARTTIME*** Until: ***ENDTIME*** \r\nWith: ***PROVIDER*** Of: ***ORG***\r\nPlease call if unable to attend.";
+        }
+        return $decode;
     }
 
     /**
@@ -473,39 +555,66 @@ abstract class AppDispatch
     public function getPatientDetails(): bool|string
     {
         $id = $this->getRequest('pid');
-        $query = "SELECT fname, lname, phone_cell, email FROM Patient_data WHERE pid = ?";
+        $query = "SELECT fname, lname, phone_cell, email FROM patient_data WHERE pid = ?";
         $result = sqlQuery($query, array($id));
 
         return json_encode($result);
     }
 
     /**
-     * @param       $email
-     * @param       $body
-     * @param       $file
-     * @param array $user
+     *
+     * @param $email
+     * @return bool
+     */
+    public function validEmail($email): bool
+    {
+        if (preg_match("/^[_a-z0-9-]+(\.[_a-z0-9-\+]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/i", $email)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param        $email
+     * @param        $from_name
+     * @param        $body
+     * @param string $subject
+     * @param string $htmlContent
      * @return string
      */
-    public function emailDocument($email, $body, $file, $user = []): string
+    public function mailEmail($email, $from_name, $body, string $subject = '', string $htmlContent = ''): string
     {
-        $from_name = ($user['fname'] ?? '') . ' ' . ($user['lname'] ?? '');
-        $desc = xlt("Comment") . ":\n" . text($body) . "\n" . xlt("This email has an attached fax document.");
-        $mail = new MyMailer();
-        $from_name = text($from_name);
-        $from =  $GLOBALS["practice_return_email_path"];
-        $mail->AddReplyTo($from, $from_name);
-        $mail->SetFrom($from, $from);
-        $to = $email ;
-        $to_name = $email;
-        $mail->AddAddress($to, $to_name);
-        $subject = xlt("Forwarded Fax Document");
-        $mail->Subject = $subject;
-        $mail->Body = $desc;
-        $mail->AddAttachment($file);
-        if ($mail->Send()) {
-            $status = xlt("Email successfully sent.");
-        } else {
-            $status =  xlt("Error: Email failed") . text($mail->ErrorInfo);
+        try {
+            $mail = new MyMailer();
+            $smtpEnabled = $mail::isConfigured();
+            if (!$smtpEnabled) {
+                $statusMsg = 'Error: ' . xlt("Mail was not sent. A SMTP client is not set up in Config Notifications!.");
+                return js_escape($statusMsg);
+            }
+            $content = text($body) . "\n";
+            $from_name = text($from_name);
+            $from = $GLOBALS["practice_return_email_path"];
+            $mail->AddReplyTo($from, $from_name);
+            $mail->SetFrom($from, $from);
+            $to = $email;
+            $to_name = $email;
+            $mail->AddAddress($to, $to_name);
+            $subject = text($subject);
+            $mail->Subject = $subject;
+            $mail->Body = $content;
+            if (!empty($htmlContent)) {
+                $mail->MsgHTML(text($htmlContent));
+                $mail->IsHTML(true);
+            }
+            if ($mail->Send()) {
+                $status = xlt("Email successfully sent.");
+            } else {
+                $status = xlt("Error: Email failed") . text($mail->ErrorInfo);
+            }
+        } catch (\Exception $e) {
+            $message = $e->getMessage();
+            $status = 'Error: ' . $message;
         }
         return $status;
     }
@@ -516,16 +625,84 @@ abstract class AppDispatch
      * @param $u
      * @return bool
      */
-    public function verifyAcl($sect = 'admin', $v = 'docs', $u = ''): bool
+    public function verifyAcl($sect = 'patients', $v = 'docs', $u = ''): bool
     {
         return AclMain::aclCheckCore($sect, $v, $u);
+    }
+
+    public function formatPhoneForSave($number): string
+    {
+        // this is u.s only. need E-164
+        $n = preg_replace('/[^0-9]/', '', $number);
+        if (stripos($n, '1') === 0) {
+            $n = '+' . $n;
+        } else {
+            $n = '+1' . $n;
+        }
+        return $n;
     }
 
     /**
      * @return null
      */
-    private function indexAction()
+    protected function index()
     {
         return null;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNotificationLog(): string
+    {
+        $type = $this->getRequest('type');
+        $fromDate = $this->getRequest('datefrom');
+        $toDate = $this->getRequest('dateto');
+
+        try {
+            $query = "SELECT notification_log.* FROM notification_log " .
+                     "WHERE notification_log.type = ? " .
+                     "AND notification_log.dSentDateTime > ? AND notification_log.dSentDateTime < ? " .
+                     "ORDER BY notification_log.dSentDateTime DESC";
+            $res = sqlStatement($query, array(strtoupper($type), $fromDate, $toDate));
+            $row = array();
+            $cnt = 0;
+            while ($nrow = sqlFetchArray($res)) {
+                $row[] = $nrow;
+                $cnt++;
+            }
+
+            $responseMsgs = '';
+            foreach ($row as $value) {
+                $adate = ($value['pc_eventDate'] . '::' . $value['pc_startTime']);
+                $pinfo = str_replace("|||", " ", $value['patient_info']);
+                $responseMsgs .= "<tr><td>" . text($value["pc_eid"]) . "</td><td>" . text($value["dSentDateTime"]) .
+                    "</td><td>" . text($adate) . "</td><td>" . text($pinfo) . "</td><td>" . text($value["message"]) . "</td></tr>";
+            }
+        } catch (Exception $e) {
+            $message = $e->getMessage();
+            return 'Error: ' . text($message) . PHP_EOL;
+        }
+
+        return $responseMsgs;
+    }
+
+    /**
+     * @param $acl
+     * @return int
+     */
+    public function authenticate($acl = ['admin', 'doc']): int
+    {
+        list($s, $v) = $acl;
+        return $this->verifyAcl($s, $v);
+    }
+
+    /**
+     * @return array|mixed
+     */
+    public function getCredentials(): mixed
+    {
+        $credentials = appDispatch::getSetup();
+        return $credentials;
     }
 }

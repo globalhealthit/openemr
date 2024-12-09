@@ -60,9 +60,10 @@ if ($GLOBALS['kernel']->getEventDispatcher() instanceof EventDispatcher) {
 ?>
 <!DOCTYPE html>
 <html>
-
 <head>
 
+<title class="title"></title>
+<meta http-equiv="Content-Type" content="text/html; charset=<?php echo $GLOBALS['charset']; ?>">
 <?php require $GLOBALS['srcdir'] . '/js/xl/dygraphs.js.php'; ?>
 
 <?php Header::setupHeader(['common','esign','dygraphs', 'utility']); ?>
@@ -105,6 +106,14 @@ if (!empty($_GET['attachid'])) {
     }
 }
 ?>
+
+
+<?php
+// If google sign-in enable then add scripts.
+if (!empty($GLOBALS['google_signin_enabled']) && !empty($GLOBALS['google_signin_client_id'])) {?>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="<?php echo $GLOBALS['web_root']?>/library/js/gSignIn.js"></script>
+<?php } ?>
 
 <script>
 $(function () {
@@ -285,11 +294,11 @@ if (!isset($_GET['attachid'])) {
 ?>
 
     <?php if ($reviewMode) { ?>
-        $("body table:first").hide();
-        $(".encounter-summary-column").hide();
-        $(".btn").hide();
-        $(".encounter-summary-column:first").show();
-        $(".title:first").text(<?php echo xlj("Review"); ?> + " " + $(".title:first").text() + " ( " + <?php echo js_escape($encounter); ?> + " )");
+    $("body table:first").hide();
+    $(".encounter-summary-column").hide();
+    $(".btn").hide();
+    $(".encounter-summary-column:first").show();
+    $(".title:first").text(<?php echo xlj("Review Encounter"); ?> + " (" + <?php echo js_escape($encounter); ?> + ")");
     <?php } ?>
 });
 
@@ -301,7 +310,6 @@ if (!isset($_GET['attachid'])) {
   });
   return false;
  }
-
 
 // create new follow-up Encounter.
 function createFollowUpEncounter() {
@@ -534,7 +542,7 @@ $eventDispatcher->addListener(EncounterMenuEvent::MENU_RENDER, function (Encount
             }
         }
 
-        $_cat = trim($item['category']);
+        $_cat = trim($item['category'] ?? '');
         $_cat = ($_cat == '') ? xl("Miscellaneous") : xl($_cat);
         $item['displayText'] = (trim($item['nickname'] ?? '') != '') ? trim($item['nickname'] ?? '') : trim($item['name'] ?? '');
         unset($item['category']);
@@ -867,7 +875,7 @@ if (
         }
 
         // $form_info = getFormInfoById($iter['id']);
-        $form_class_list = (strtolower(substr($ite['form_name'], 0, 5)) == 'camos') ? "" : "text onerow";
+        $form_class_list = (strtolower(substr($iter['form_name'], 0, 5)) == 'camos') ? "" : "text onerow";
         echo '<div id="' . attr($formdir) . '~' . attr($iter['form_id']) . '" title="' . xla("Edit Form") . '" class="form-holder ' . $form_class_list . '">';
 
         $acl_groups = AclMain::aclCheckCore("groups", "glog", false, 'write') ? true : false;
@@ -880,7 +888,12 @@ if (
 
         // Figure out the correct author (encounter authors are the '$providerNameRes', while other
         // form authors are the '$user['fname'] . "  " . $user['lname']').
-        $form_author = ($formdir == 'newpatient') ? $providerNameRes : ($user['fname'] ?? '') . "  " . ($user['lname'] ?? '');
+        $form_author = ($formdir == 'newpatient') ? $providerNameRes :
+            ($user['fname'] ?? '') . " " .
+            (($user['mname'] ?? '') ? $user['mname'] . " " : " ") .
+            ($user['lname'] ?? '') .
+            (($user['suffix'] ?? '') ? ", " . $user['suffix'] : '') .
+            (($user['valedictory'] ?? '') ? ", " . ($user['valedictory']) : '');
         $div_nums_attr = attr($divnos);
         $title = xla("Expand/Collapse this form");
         $display = text($form_name) . " " . xlt("by") . " " . text($form_author);

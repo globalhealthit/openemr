@@ -76,6 +76,7 @@
 //   Uzbek                          // xl('Uzbek')
 //   Vietnamese                     // xl('Vietnamese')
 
+use OpenEMR\Common\Forms\FormActionBarSettings;
 use OpenEMR\Events\Globals\GlobalsInitializedEvent;
 use OpenEMR\OeUI\RenderFormFieldHelper;
 use OpenEMR\Services\Globals\GlobalsService;
@@ -122,7 +123,8 @@ $USER_SPECIFIC_TABS = array('Appearance',
     'Report',
     'Calendar',
     'CDR',
-    'Connectors');
+    'Connectors',
+    'Questionnaires');
 $USER_SPECIFIC_GLOBALS = array('default_top_pane',
     'default_second_tab',
     'theme_tabs_layout',
@@ -156,7 +158,10 @@ $USER_SPECIFIC_GLOBALS = array('default_top_pane',
     'patient_birthday_alert',
     'patient_birthday_alert_manual_off',
     'erx_import_status_message',
-    'weno_provider_password');
+    'questionnaire_display_LOINCnote',
+    'questionnaire_display_style',
+    'questionnaire_display_fullscreen'
+);
 
 // Gets array of time zones supported by PHP.
 //
@@ -191,7 +196,12 @@ $GLOBALS_METADATA = array(
             'style_light.css',
             xl('Pick a general theme (need to logout/login after changing this setting).')
         ),
-
+        'hide_dashboard_cards' => array(
+            xl('Hide selected cards on patient dashboard'),
+            'm_dashboard_cards',
+            '',
+            xl('Multi (Shift or CTRL) Select the cards you want to hide on the patient dashboard.')
+        ),
         'window_title_add_patient_name' => array(
             xl('Add Patient Name To Window Title'),
             'bool',                           // data type
@@ -428,6 +438,12 @@ $GLOBALS_METADATA = array(
             xl('Recommended setting is warn and prevent web browser refresh. Only use other settings if needed and use at own risk.')
         ),
 
+        'form_actionbar_position' => array(
+            xl('Form ActionBar (save, cancel, etc) position')
+            ,FormActionBarSettings::getGlobalSettingsList()
+            ,FormActionBarSettings::getDefaultSetting() // default = top of the form
+            ,xl('Placement of the save/cancel, and other bottons where supported (Demographics, Encounter Forms, etc).')
+        ),
     ),
 
     'Branding' => [
@@ -1052,7 +1068,7 @@ $GLOBALS_METADATA = array(
         ),
 
         'enable_help' => array(
-           xl('Enable Help Modal'),
+            xl('Enable Help Modal'),
             array(
                 '0' => xl('Hide Help Modal'),
                 '1' => xl('Show Help Modal'),
@@ -1529,6 +1545,13 @@ $GLOBALS_METADATA = array(
             xl('Enable swap secondary insurance')
         ),
 
+        'add_unmatched_code_from_ins_co_era_to_billing' => array(
+            xl('Enable adding unmatched code from insurance company to billing table'),
+            'bool',                           // data type
+            '0',                              // default
+            xl('Enable adding unmatched code from insurance company to billing table')
+        ),
+
     ),
 
     // E-Sign Tab
@@ -1874,6 +1897,13 @@ $GLOBALS_METADATA = array(
             xl('The appointment status changes and encounter creations are managed through the Patient Tracker.')
         ),
 
+        'auto_create_prevent_reason' => array(
+            xl('Prevent Appointment Comment as Visit Reason'),
+            'bool',                           // data type
+            '0',                              // default
+            xl('Check this if you do not want to allow the appointments comment as the visit reason when auto-creating new encounter for appointment.')
+        ),
+
         'allow_early_check_in' => array(
             xl('Allow Early Check In'),
             'bool',                           // data type
@@ -2000,23 +2030,21 @@ $GLOBALS_METADATA = array(
         ),
 
         'disable_rcb' => array(
-          xl('Recall Board: Disable'),
-          'bool',                           // data type
-          '0',                              // default
-          xl('Do not display the Recall Board.')
+            xl('Recall Board: Disable'),
+            'bool',                           // data type
+            '0',                              // default
+            xl('Do not display the Recall Board.')
         ),
-
-
 
 
     ),
     // Insurance Tab
     'Insurance' => array(
-        'enable_oa' => array(
-            xl('Enable Office Ally Insurance Eligibility'),
+        'enable_eligibility_requests' => array(
+            xl('Enable Insurance Eligibility'),
             'bool',
             '0',
-            xl('Allow insurance eligibility checks using Office Ally')
+            xl('Allow insurance eligibility checks using an X12 Partner')
         ),
 
         'simplified_demographics' => array(
@@ -3088,6 +3116,18 @@ $GLOBALS_METADATA = array(
             xl('Pick a default portal theme.')
         ),
 
+        'portal_force_credential_reset' => array(
+            xl('Portal Login Forced Credential Reset'),
+            array(
+                '0' => xl('Allow (Recommended)'),
+                '1' => xl('Disable'),
+                '2' => xl('User optional from credential dialog.')
+            ),
+            '0',
+            xl('Select the credentials create or reset behavior for forcing patient to change password on portal login.') .
+            xl('User optional persists the options checkbox state in the credential dialog to allow deciding on a patient by patient basis.')
+        ),
+
         'portal_onsite_two_basepath' => array(
             xl('Portal Uses Server Base Path (internal)'),
             'bool',
@@ -3095,9 +3135,16 @@ $GLOBALS_METADATA = array(
             xl('Use servers protocol and host in urls (portal internal only).')
         ),
 
+        'use_email_for_portal_username' => array(
+            xl('Use Patients on-record E-Mail for new Portal Login Username'),
+            'bool',
+            '1',
+            xl('Use contact email when creating portal credentials.')
+        ),
+
         'enforce_signin_email' => array(
-            xl('Enforce E-Mail in Portal Log On Dialog'),
-            'bool',                           // data type
+            xl('Require Patients to enter their on-record email for Portal Login'),
+            'bool',
             '1',
             xl('Patient is required to enter their contact e-mail if present in Demographics Contact.')
         ),
@@ -3130,6 +3177,13 @@ $GLOBALS_METADATA = array(
             xl('Enable Patient Portal new patient to self register.')
         ),
 
+        'portal_two_pass_reset' => array(
+            xl('Allow Patients to Reset Credentials') . ' ' . xl('This requires reCAPTCHA to be setup'),
+            'bool',                           // data type
+            '0',
+            xl('Patient may change their logon from portal login dialog.')
+        ),
+
         'allow_portal_appointments' => array(
             xl('Allow Online Appointments'),
             'bool',                           // data type
@@ -3137,15 +3191,15 @@ $GLOBALS_METADATA = array(
             xl('Allow Patient to make and view appointments online.')
         ),
 
-        'allow_portal_chat' => array(
-            xl('Allow Online Secure Chat'),
+        'allow_custom_report' => array(
+            xl('Allow Online Custom Content Report'),
             'bool',                           // data type
             '1',
-            xl('Allow Patient to use Secure Chat Application.')
+            xl('Allow Patient to use Custom Content Report.')
         ),
 
         'portal_two_ledger' => array(
-            xl('Allow Patient Ledger'),
+            xl('Allow Patient Billing Summary Report Online'),
             'bool',                           // data type
             '1',
             xl('Allow Patient to view their accounting ledger online.')
@@ -3158,19 +3212,50 @@ $GLOBALS_METADATA = array(
             xl('Allow Patient to make payments online.')
         ),
 
-        'portal_two_pass_reset' => array(
-            xl('Allow Patients to Reset Credentials') . ' ' . xl('This requires reCAPTCHA to be setup'),
-            'bool',                           // data type
-            '0',
-            xl('Patient may change their logon from portal login dialog.')
-        ),
-
         'portal_onsite_document_download' => array(
             xl('Enable Patient Portal Document Download'),
             'bool',                           // data type
             '1',
             xl('Enables the ability to download documents in the Patient Portal by the user.')
         ),
+
+        'allow_portal_uploads' => array(
+            xl('Allow Patient Uploads from Portal Documents'),
+            'bool',
+            '1',
+            xl('Enables the ability for patient to upload documents to Documents Onsite Patient category.')
+        ),
+
+        'show_insurance_in_profile' => array(
+            xl('Allow Insurances in Patient Profile'),
+            'bool',
+            '1',
+            xl('UnCheck to not show insurances in Profile.')
+        ),
+
+        'show_portal_primary_logo' => [
+            xl('Show Primary Logo on portal login page'),
+            'bool',
+            '1',
+            xl('Show primary logo on login'),
+        ],
+
+        'extra_portal_logo_login' => array(
+            xl('Show Secondary Logo on portal Login page'),
+            'bool',                           // data type
+            '0',                              // default = false
+            xl('Show Secondary Logo on Login')
+        ),
+
+        'secondary_portal_logo_position' => [
+            xl('Order of the Secondary logo'),
+            [
+                'first' => xl('First Position'),
+                'second' => xl('Second Position'),
+            ],
+            'second',
+            xl('Place the secondary logo first, or second'),
+        ],
     ),
 
     // Connectors Tab
@@ -3227,7 +3312,7 @@ $GLOBALS_METADATA = array(
             xl('OAuth2 App Manual Approval Settings'),
             array(
                 0 => xl('Patient standalone apps Auto Approved, EHR-Launch,Provider&System Apps require manual approval')
-                ,1 => xl('Manually Approve All Apps (USA jurisdictions must approve all patient standalone apps within 48 hours)')
+            , 1 => xl('Manually Approve All Apps (USA jurisdictions must approve all patient standalone apps within 48 hours)')
 //                ,2 => xl('All apps Auto Approved') we could add this setting at a latter date
             ),
             '0',
@@ -3363,10 +3448,10 @@ $GLOBALS_METADATA = array(
         ),
 
         'medex_enable' => array(
-          xl('Enable MedEx Communication Service'),
-          'bool',                           // data type
-          '0',
-          xl('Enable MedEx Communication Service')
+            xl('Enable MedEx Communication Service'),
+            'bool',                           // data type
+            '0',
+            xl('Enable MedEx Communication Service')
         ),
 
         'erx_enable' => array(
@@ -3483,34 +3568,6 @@ $GLOBALS_METADATA = array(
             ),
             '0',
             xl('Log all NewCrop eRx Requests and / or Responses.'),
-        ),
-
-        'weno_rx_enable' => array(
-            xl('Enable Weno eRx Service'),
-            'bool',
-            '0',
-            xl('Enable Weno eRx Service') . ' ' . xl('Contact https://online.wenoexchange.com to sign up for Weno Free eRx service.')
-        ),
-
-        'weno_rx_enable_test' => array(
-            xl('Enable Weno eRx Service Test mode'),
-            'bool',
-            '1',
-            xl('Enable Weno eRx Service Test mode')
-        ),
-
-        'weno_encryption_key' => array(
-            xl('Weno Encryption Key'),
-            'encrypted',                      // data type
-            '',
-            xl('Encryption key issued by Weno eRx service.')
-        ),
-
-        'weno_provider_password' => array(
-            xl('Weno Provider Account Password'),
-            'encrypted',                      // data type
-            '',
-            xl('Each provider needs to set this under user settings. This should be blank')
         ),
 
         'ccda_alt_service_enable' => array(
@@ -3810,6 +3867,12 @@ $GLOBALS_METADATA = array(
             'default',
             xl('Name of zend template for pdf export, possible to add custom template in the PrescriptionTemplate module')
         ),
+        'rx_send_email' => array(
+            xl('Allow email sending of prescriptions'),
+            'bool',                           // data type
+            '1',
+            xl('Enable email option (available on prescriptions list screen) for emailing prescriptions')
+        ),
     ),
     'PDF' => array(
         'pdf_layout' => array(
@@ -4067,6 +4130,14 @@ $GLOBALS_METADATA = array(
             'LETTER',
             xl('Choose Paper Size')
         ),
+
+        'pdf_font_size' => array(
+            xl('PDF Font Size in Pt'),
+            'num',
+            '10',
+            xl('Sets the font size for most PDF text in pt')
+        ),
+
         'pdf_left_margin' => array(
             xl('Left Margin (mm)'),
             'num',
@@ -4156,7 +4227,7 @@ $GLOBALS_METADATA = array(
         ),
 
         'env_font_size' => array(
-            xl('Font Size in Pt'),
+            xl('Envelope Font Size in Pt'),
             'num',                           // data type
             '14',
             xl('Sets the font of the address text on the envelope in mm')
@@ -4255,6 +4326,13 @@ $GLOBALS_METADATA = array(
             xl('How to display the sensitivity option'),
         ],
 
+        'enc_in_collection' => [
+            xl('Show In Collection on Encounter Form'),
+            getDefaultRenderListOptions(),
+            RenderFormFieldHelper::SHOW_ALL,
+            xl("How to display the 'In Collection' option. May be overriden by Hide Billing Widget setting"),
+        ],
+
         'enc_enable_issues' => [
             xl('Allow Linking/Adding Issues on Encounter'),
             getDefaultRenderListOptions(),
@@ -4304,8 +4382,48 @@ $GLOBALS_METADATA = array(
             xl('Show Encounter Class option on Encounters'),
         ],
 
+        'enc_enable_ordering_provider' => [
+            xl('Show Ordering Provider option on Encounters'),
+            getDefaultRenderListOptions(),
+            RenderFormFieldHelper::HIDE_ALL,
+            xl('Display the Ordering Provider option on Encounters'),
+        ],
+    ],
+
+    'Questionnaires' => [
+        'questionnaire_display_LOINCnote' => array(
+            xl('Display LOINC note on questionnaires'),
+            array(
+                '0' => xl('At the top of the page only'),
+                '1' => xl('At the foot of the page only'),
+                '2' => xl('At the top of the page and at the foot of the page'),
+                '3' => xl('Do not display the note')
+            ),
+            '0' ,                          // default = display at top of form
+            xl('Configure where LOINC statement should be displayed')
+        ),
+
+        'questionnaire_display_style' => array(
+            xl('Questionnaire Form Display Style'),
+            array(
+                '0' => xl('OpenEMR Auto Select Dark/Light Themed Version'),
+                '1' => xl('LForms Project Maintained Light Version(Original)'),
+                '3' => xl('OpenEMR Light Theme Version Always'),
+                '4' => xl('OpenEMR Dark Theme Version Always'),
+            ),
+            '0' ,                          // default = display at top of form
+            xl('Choose OpenEMR auto select based on core theme styles(OpenEMR dark theme turns on Questionnaire dark, LForms project maintained light styles(Original) or default to always dark or light regardless of core themes.')
+        ),
+
+        'questionnaire_display_fullscreen' => array(
+            xl('Turn off full screen display for Questionnaire Forms'),
+            'bool',                           // data type
+            '0',                              // default = false
+            xl('Default form width of Questionnaire display.')
+        ),
     ],
 );
+
 
 if (!empty($GLOBALS['ippf_specific'])) {
     $GLOBALS['GLOBALS_METADATA']['IPPF Menu'] = array(
@@ -4428,7 +4546,7 @@ if (!empty($GLOBALS['ippf_specific'])) {
         'gbl_rapid_workflow' => array(
             xl('Rapid Workflow Option'),
             array(
-                '0'        => xl('None'),
+                '0' => xl('None'),
                 'LBFmsivd' => xl('MSI (requires LBFmsivd form)'),
                 'fee_sheet' => xl('Fee Sheet and Checkout'),
             ),
@@ -4503,9 +4621,9 @@ if (!empty($GLOBALS['ippf_specific'])) {
         'gbl_custom_receipt' => array(
             xl('Custom Checkout Receipt'),
             array(
-                '0'                                => xl('None'),
+                '0' => xl('None'),
                 'checkout_receipt_general.inc.php' => xl('POS Printer'),
-                'checkout_receipt_panama.inc.php'  => xl('Panama'),
+                'checkout_receipt_panama.inc.php' => xl('Panama'),
             ),
             '0',                              // default
             xl('Present an additional PDF custom receipt after checkout.')

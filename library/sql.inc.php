@@ -552,14 +552,14 @@ function HelpfulDie($statement, $sqlerr = '')
 
     echo "<h2><font color='red'>" . xlt('Query Error') . "</font></h2>";
 
-    if (!$GLOBALS['sql_string_no_show_screen']) {
+    if (!$GLOBALS['sql_string_no_show_screen'] ?? '') {
         echo "<p><font color='red'>ERROR:</font> " . text($statement) . "</p>";
     }
 
     $logMsg = "SQL Error with statement:" . $statement;
 
     if ($sqlerr) {
-        if (!$GLOBALS['sql_string_no_show_screen']) {
+        if (!$GLOBALS['sql_string_no_show_screen'] ?? '') {
              echo "<p>Error: <font color='red'>" . text($sqlerr) . "</font></p>";
         }
 
@@ -568,7 +568,7 @@ function HelpfulDie($statement, $sqlerr = '')
 
     $backtrace = debug_backtrace();
 
-    if (!$GLOBALS['sql_string_no_show_screen']) {
+    if (!$GLOBALS['sql_string_no_show_screen'] ?? '') {
         for ($level = 1; $level < count($backtrace); $level++) {
             $info = $backtrace[$level];
             echo "<br />" . text($info["file"] . " at " . $info["line"] . ":" . $info["function"]);
@@ -844,4 +844,18 @@ function privQuery($sql, $params = null)
     }
 
     return $rez;
+}
+
+
+/**
+* Function provides generation of sequence numbers with built-in ADOdb function.
+* Increments the number in the edi_sequences table.
+* One example of use is the counter for batches in the 837 claims creation.
+*
+* @return integer
+*/
+function edi_generate_id()
+{
+    $database = $GLOBALS['adodb']['db'];
+    return $database->GenID("edi_sequences");
 }

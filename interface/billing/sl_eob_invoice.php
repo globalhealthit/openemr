@@ -29,7 +29,7 @@ require_once("$srcdir/payment.inc.php");
 use OpenEMR\Billing\InvoiceSummary;
 use OpenEMR\Billing\SLEOB;
 use OpenEMR\Common\Csrf\CsrfUtils;
-use OpenEMR\Common\Logging\EventAuditLogger;
+use OpenEMR\Common\Utils\FormatMoney;
 use OpenEMR\Core\Header;
 
 $debug = 0; // set to 1 for debugging mode
@@ -46,15 +46,6 @@ if ($from_posting) {
 $ALLOW_DELETE = true;
 
 $info_msg = "";
-
-// Format money for display.
-//
-function bucks($amount)
-{
-    if ($amount) {
-        return sprintf("%.2f", $amount);
-    }
-}
 
 ?>
 <html>
@@ -295,7 +286,7 @@ if (preg_match('/^Ins(\d)/i', ($_POST['form_insurance'] ?? ''), $matches)) {
     $payer_type = $matches[1];
 }
 
-if (!empty($_POST['form_save']) || !empty($_POST['form_cancel']) || !empty($_POST['isLastClosed']) || !empty($_POST['billing_note'])) {
+if (!empty($_POST['form_save']) || !empty($_POST['form_cancel']) || !empty($_POST['isLastClosed']) || !empty($_POST['enc_billing_note'])) {
     if (!empty($_POST['form_save'])) {
         if (!CsrfUtils::verifyCsrfToken($_POST["csrf_token_form"])) {
             CsrfUtils::csrfNotVerified();
@@ -404,7 +395,7 @@ if (!empty($_POST['form_save']) || !empty($_POST['form_cancel']) || !empty($_POS
 // Maintain which insurances are marked as finished.
 
         $form_done = 0 + $_POST['form_done'];
-        $form_stmt_count = 0 + $_POST['form_stmt_count'];
+        $form_stmt_count = 0 + (int) $_POST['form_stmt_count'];
         sqlStatement("UPDATE form_encounter SET last_level_closed = ?, stmt_count = ? WHERE pid = ? AND encounter = ?", array($form_done, $form_stmt_count, $patient_id, $encounter_id));
 
         if (!empty($_POST['form_secondary'])) {
@@ -426,7 +417,7 @@ if (!empty($_POST['form_save']) || !empty($_POST['form_cancel']) || !empty($_POS
     if (!$debug && !$save_stay && !$_POST['isLastClosed']) {
         echo "doClose();\n";
     }
-    if (!$debug && ($save_stay || $_POST['isLastClosed'] || $_POST['billing_note'])) {
+    if (!$debug && ($save_stay || $_POST['isLastClosed'] || $_POST['enc_billing_note'])) {
         if ($_POST['isLastClosed']) {
             // save last closed level
             $form_done = 0 + $_POST['form_done'];
@@ -439,9 +430,9 @@ if (!empty($_POST['form_save']) || !empty($_POST['form_cancel']) || !empty($_POS
             }
         }
 
-        if ($_POST['billing_note']) {
-            // save last closed level
-            sqlStatement("UPDATE form_encounter SET billing_note = ? WHERE pid = ? AND encounter = ?", array($_POST['billing_note'], $patient_id, $encounter_id));
+        if ($_POST['enc_billing_note']) {
+            // save enc billing note
+            sqlStatement("UPDATE form_encounter SET billing_note = ? WHERE pid = ? AND encounter = ?", array($_POST['enc_billing_note'], $patient_id, $encounter_id));
         }
 
         // will reload page w/o reposting
@@ -518,8 +509,14 @@ $bnrow = sqlQuery("select billing_note from form_encounter where pid = ? AND enc
                 </div>
                 <div class="form-row">
                     <div class="form-group col-lg">
-                        <label class="col-form-label" for="billing_note"><?php echo xlt('Billing Note'); ?>:</label>
-                        <textarea name="billing_note" id="billing_note" class="form-control" cols="5" rows="2"><?php echo text(($pdrow['billing_note'] ?? '')) . "\n" . text(($bnrow['billing_note'] ?? '')); ?></textarea>
+                        <label class="col-form-label" for="pt_billing_note"><?php echo xlt('Patient Billing Note'); ?>:</label>
+                        <textarea name="pt_billing_note" id="pt_billing_note" class="form-control" cols="5" rows="1" readonly><?php echo text($pdrow['billing_note'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group col-lg">
+                        <label class="col-form-label" for="enc_billing_note"><?php echo xlt('Encounter Billing Note'); ?>:</label>
+                        <textarea name="enc_billing_note" id="enc_billing_note" class="form-control" cols="5" rows="2"><?php echo text($bnrow['billing_note'] ?? ''); ?></textarea>
                     </div>
                 </div>
                 <div class="form-row">
@@ -664,7 +661,7 @@ $bnrow = sqlQuery("select billing_note from form_encounter where pid = ? AND enc
                                 ?>
                                 <tr>
                                     <td class="detail" style="background:<?php echo $dispcode ? 'lightyellow' : ''; ?>"><?php echo text($dispcode); $dispcode = "" ?></td>
-                                    <td class="detail"><?php echo text(bucks($tmpchg)); ?></td>
+                                    <td class="detail"><?php echo text(FormatMoney::getBucks($tmpchg)); ?></td>
                                     <td class="detail">&nbsp;</td>
                                     <td class="detail">
                                         <?php
@@ -679,8 +676,8 @@ $bnrow = sqlQuery("select billing_note from form_encounter where pid = ? AND enc
                                         ?>
                                     </td>
                                     <td class="detail"><?php echo text($ddate); ?></td>
-                                    <td class="detail"><?php echo text(bucks($ddata['pmt'] ?? '')); ?></td>
-                                    <td class="detail"><?php echo text(bucks($tmpadj)); ?></td>
+                                    <td class="detail"><?php echo text(FormatMoney::getBucks($ddata['pmt'] ?? '')); ?></td>
+                                    <td class="detail"><?php echo text(FormatMoney::getBucks($tmpadj ?? '')); ?></td>
                                     <td class="detail">&nbsp;</td>
                                     <td class="detail"><?php echo text($ddata['rsn'] ?? ''); ?></td>
                                     <?php
@@ -706,11 +703,11 @@ $bnrow = sqlQuery("select billing_note from form_encounter where pid = ? AND enc
                                 <td class="last_detail">&nbsp;</td>
                                 <td class="last_detail">
                                     <input name="form_line[<?php echo attr($code); ?>][bal]" type="hidden"
-                                           value="<?php echo attr(bucks($cdata['bal'])); ?>" />
+                                           value="<?php echo attr(FormatMoney::getBucks($cdata['bal'] ?? '')); ?>" />
                                     <input name="form_line[<?php echo attr($code); ?>][ins]" type="hidden"
                                            value="<?php echo attr($cdata['ins'] ?? ''); ?>" />
                                     <input name="form_line[<?php echo attr($code); ?>][code_type]" type="hidden"
-                                           value="<?php echo attr($cdata['code_type'] ?? ''); ?>" /> <?php echo text(sprintf("%.2f", $cdata['bal'])); ?>
+                                           value="<?php echo attr($cdata['code_type'] ?? ''); ?>" /> <?php echo text(FormatMoney::getBucks($cdata['bal'], true)); ?>
                                     &nbsp;
                                 </td>
                                 <td class="last_detail"></td>
