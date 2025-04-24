@@ -30,3 +30,5 @@ ccdaservice/node_modules
 # testing
 .phpunit.result.cache
 coverage/js-unit
+
+public/images/logos/custom/*
