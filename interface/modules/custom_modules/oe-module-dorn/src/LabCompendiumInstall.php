@@ -2,11 +2,19 @@
 
 /**
  *
+<<<<<<< HEAD
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  *
  * @author    Brad Sharp <brad.sharp@claimrev.com>
  * @copyright Copyright (c) 2022-2025 Brad Sharp <brad.sharp@claimrev.com>
+=======
+ * @package OpenEMR
+ * @link    http://www.open-emr.org
+ *
+ * @author    Brad Sharp <brad.sharp@claimrev.com>
+ * @copyright Copyright (c) 2022 Brad Sharp <brad.sharp@claimrev.com>
+>>>>>>> d11e3347b (modules setup and UI changes)
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
 
@@ -17,6 +25,7 @@ use OpenEMR\Modules\Dorn\LabRouteSetup;
 
 class LabCompendiumInstall
 {
+<<<<<<< HEAD
     /**
      * Echoes a string wrapped in an HTML <li>.
      */
@@ -25,6 +34,8 @@ class LabCompendiumInstall
         echo '<li>' . text($msg) . '</li>' . "\n";
     }
 
+=======
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function install($labGuid)
     {
         $compendiumResponse = ConnectorApi::getCompendium($labGuid);
@@ -39,12 +50,20 @@ class LabCompendiumInstall
                 }
             }
             ConnectorApi::setCompendiumLastUpdate($labGuid);
+<<<<<<< HEAD
             self::echoLi("Compendium has been updated for lab: " . text($compendiumResponse->compendium->labName));
         } else {
             self::echoLi("Error Getting Compendium! " . text($compendiumResponse->responseMessage));
         }
     }
 
+=======
+            echo "Compendium has been updated for lab: " . text($compendiumResponse->compendium->labName);
+        } else {
+            echo "Error Getting Compendium! " . text($compendiumResponse->responseMessage);
+        }
+    }
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function loadGroupRecord($compendium, $lab_id)
     {
         $sql = "SELECT * FROM procedure_type WHERE parent = ? AND lab_id = ? AND procedure_type = ?";
@@ -63,19 +82,30 @@ class LabCompendiumInstall
         $sql = "INSERT INTO procedure_type (name, lab_id, procedure_type, description) 
         VALUES (?, ?, ?, ?)";
 
+<<<<<<< HEAD
         $sqlArr = array($compendium->labName, $lab_id, 'grp', 'DORN:' . $compendium->labName . ' Orders');
+=======
+        $sqlArr = array($compendium->labName, $lab_id, 'grp','DORN:' . $compendium->labName . ' Orders');
+>>>>>>> d11e3347b (modules setup and UI changes)
         $id = sqlInsert($sql, $sqlArr);
 
         $sql = "INSERT INTO procedure_type (parent,name, lab_id, procedure_type, description) 
                 VALUES (?, ?, ?, ?, ?)";
 
+<<<<<<< HEAD
         $sqlArr = array($id, $compendium->labName, $lab_id, 'grp', 'Ordering Tests');
+=======
+        $sqlArr = array($id,$compendium->labName, $lab_id, 'grp','Ordering Tests');
+>>>>>>> d11e3347b (modules setup and UI changes)
         $id = sqlInsert($sql, $sqlArr);
 
 
         return $id;
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function loadOrderableItem($item, $parentId, $lab_id)
     {
         if (!$item->loinc) {
@@ -84,16 +114,28 @@ class LabCompendiumInstall
 
         $sql = "SELECT procedure_type_id FROM procedure_type 
             WHERE lab_id = ? AND parent = ? AND procedure_code = ? AND procedure_type = ? AND standard_code = ?";
+<<<<<<< HEAD
         $procOrder = sqlQuery($sql, [$lab_id, $parentId, $item->code, "ord", $item->loinc]);
         if ($procOrder) {
             $id = $procOrder["procedure_type_id"];
             $sql = "UPDATE procedure_type SET Activity = ? WHERE procedure_type_id = ?";
             sqlStatement($sql, [1, $id]);
+=======
+        $procOrder = sqlQuery($sql, [$lab_id ,$parentId, $item->code, "ord" ,$item->loinc]);
+        if ($procOrder) {
+            $id = $procOrder["procedure_type_id"];
+            $sql = "UPDATE procedure_type SET Activity = ? WHERE procedure_type_id = ?";
+            sqlStatement($sql, [1,$id]);
+>>>>>>> d11e3347b (modules setup and UI changes)
         } else {
             $sql = "INSERT INTO procedure_type (parent, name, lab_id, procedure_type, procedure_code, standard_code) 
             VALUES (?, ?, ?, ?, ?, ?)";
 
+<<<<<<< HEAD
             $sqlArr = array($parentId, $item->name ?? '', $lab_id ?? '', 'ord', $item->code ?? '', $item->loinc ?? '');
+=======
+            $sqlArr = array($parentId, $item->name, $lab_id, 'ord', $item->code, $item->loinc);
+>>>>>>> d11e3347b (modules setup and UI changes)
             $id = sqlInsert($sql, $sqlArr);
         }
 
@@ -106,6 +148,7 @@ class LabCompendiumInstall
             $aoeCount++;
         }
     }
+<<<<<<< HEAD
 
     public static function loadResult($component, $parentId, $lab_id)
     {
@@ -116,6 +159,16 @@ class LabCompendiumInstall
         $id = sqlInsert($sql, $sqlArr);
     }
 
+=======
+    public static function loadResult($component, $parentId, $lab_id)
+    {
+        echo "loading result";
+        $sql = "INSERT INTO procedure_type (parent, name, lab_id, procedure_type, procedure_code, standard_code) 
+        VALUES (?, ?, ?, ?, ?, ?)";
+        $sqlArr = array($parentId, $component->name, $lab_id, 'res', $component->code, $component->loinc);
+        $id = sqlInsert($sql, $sqlArr);
+    }
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function loadAoe($aoe, $lab_id, $aoeCount, $pcode)
     {
         $fldtype = LabCompendiumInstall::getQuestionType($aoe->questionType);
@@ -130,9 +183,15 @@ class LabCompendiumInstall
         $qrow = sqlQuery(
             "SELECT * FROM procedure_questions WHERE lab_id = ? AND procedure_code = ? AND question_code = ?",
             array(
+<<<<<<< HEAD
                 $lab_id,
                 $pcode,
                 $qcode
+=======
+            $lab_id,
+            $pcode,
+            $qcode
+>>>>>>> d11e3347b (modules setup and UI changes)
             )
         );
 
@@ -142,6 +201,7 @@ class LabCompendiumInstall
             sqlStatement(
                 "INSERT INTO procedure_questions SET seq = ?, lab_id = ?, procedure_code = ?, question_code = ?, question_text = ?, fldtype = ?, required = ?, tips = ?, activity = ?, options = ?, maxsize = ?",
                 array(
+<<<<<<< HEAD
                     $aoeCount,
                     $lab_id,
                     $pcode,
@@ -153,10 +213,24 @@ class LabCompendiumInstall
                     $activity,
                     $options,
                     $maxSize
+=======
+                $aoeCount,
+                $lab_id,
+                $pcode,
+                $qcode,
+                $question,
+                $fldtype,
+                $required,
+                "",
+                $activity,
+                $options,
+                $maxSize
+>>>>>>> d11e3347b (modules setup and UI changes)
                 )
             );
         } else { // update record
             sqlStatement(
+<<<<<<< HEAD
                 "UPDATE procedure_questions SET seq = ?, question_text = ?, fldtype = ?, required = ?, tips = ?, activity = ?, options = ?, maxsize = ?  WHERE lab_id = ? AND procedure_code = ? AND question_code = ?",
                 array(
                     $aoeCount,
@@ -170,11 +244,29 @@ class LabCompendiumInstall
                     $lab_id,
                     $pcode,
                     $qcode,
+=======
+                "UPDATE procedure_questions SET seq = ?, question_text = ?, fldtype = ?, required = ?, tips = ?, activity = ? WHERE lab_id = ? AND procedure_code = ? AND question_code = ?, options = ?, maxsize = ?",
+                array(
+                $aoeCount,
+                $question,
+                $fldtype,
+                $required,
+                "",
+                $activity,
+                $lab_id,
+                $pcode,
+                $qcode,
+                $options,
+                $maxSize
+>>>>>>> d11e3347b (modules setup and UI changes)
                 )
             );
         }
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function formatAnswers($answers): string
     {
         $returnValue = "";
@@ -184,7 +276,10 @@ class LabCompendiumInstall
         }
         return $returnValue;
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function getQuestionType($questionType)
     {
         /*
@@ -205,7 +300,10 @@ class LabCompendiumInstall
         }
         return 'T';
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> d11e3347b (modules setup and UI changes)
     public static function uninstall($lab_id)
     {
         sqlStatement("DELETE FROM procedure_type WHERE lab_id = ? AND (procedure_type = 'det' OR procedure_type = 'res') ", array($lab_id));
