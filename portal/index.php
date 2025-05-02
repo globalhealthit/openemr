@@ -645,9 +645,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
                 </div>
-                    
-                    
-                    <div id="standard-auth-password" class="form-group row">
+                    <!-- <div id="standard-auth-password" class="form-group row">
                         <label for="pass" class="col-form-label col-sm-4"><?php echo xlt('Password') ?></label>
                         <div class="col input-group">
                             <input class="form-control" name="pass" id="pass" type="password" required autocomplete="none" />
@@ -670,10 +668,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         </div>
                     </div>
                 <?php if ($GLOBALS['enforce_signin_email']) { ?>
-                    <!-- <div class="form-group">
-                        <label for="passaddon"><?php echo xlt('E-Mail Address') ?></label>
-                        <input class="form-control" name="passaddon" id="passaddon" type="email" autocomplete="none" />
-                    </div> -->
                     <div class="form-group row" style="display: none;">
                         <label for="passaddon" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('E-Mail Address') ?></label>
                         <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
@@ -862,12 +856,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                 document.querySelector("div.alert").remove();
             }, 6000);
         }
-
-        $('.patientportal').click(function(){
-            var patientUser = $('#uname').val();
-            var patientEmail = $('#passaddon').val(patientUser);
-        });
-
 
         $('.patientportal').click(function(){
             var patientUser = $('#uname').val();
