@@ -824,12 +824,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             var patientEmail = $('#passaddon').val(patientUser);
         });
 
-
-        $('.patientportal').click(function(){
-            var patientUser = $('#uname').val();
-            var patientEmail = $('#passaddon').val(patientUser);
-        });
-
     </script>
 </body>
 </html>
