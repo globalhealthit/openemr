@@ -433,51 +433,47 @@ $twig = (new TwigContainer(null, $GLOBALS['kernel']))->getTwig();
         if ($rs['app_url'] != "main/main_screen.php") {
             echo '<iframe name="app1" src="../../' . attr($rs['app_url']) . '"
             style="position: absolute; left: 0; top: 0; height: 100%; width: 100%; border: none;" />';
-            $disp_mainBox = 'style="display: none;"';
-        }
+        $disp_mainBox = 'style="display: none;"';
     }
-    ?>
-    <div id="mainBox" <?php echo $disp_mainBox ?>>
-        <nav class="navbar navbar-expand-xl navbar-light bg-light py-0">
-            <?php if ($GLOBALS['display_main_menu_logo'] === '1') : ?>
-                <a class="navbar-brand" href="https://www.open-emr.org" title="OpenEMR <?php echo xla("Website"); ?>" rel="noopener" target="_blank">
-                    <img src="<?php echo $menuLogo; ?>" class="d-inline-block align-middle" height="16" alt="<?php echo xlt('Main Menu Logo'); ?>">
-                </a>
-            <?php endif; ?>
-            <button class="navbar-toggler mr-auto" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
-            <?php if ($GLOBALS['search_any_patient'] != 'none') : ?>
-                <form name="frm_search_globals" class="form-inline">
-                    <div class="input-group">
-                        <input type="text" id="anySearchBox" class="form-control-sm <?php echo $any_search_class ?> form-control" name="anySearchBox" placeholder="<?php echo xla("Search by any demographics") ?>" autocomplete="off">
-                        <div class="input-group-append">
-                            <button type="button" id="search_globals" class="btn btn-sm btn-secondary <?php echo $search_globals_class ?>" title='<?php echo xla("Search for patient by entering whole or part of any demographics field information"); ?>' data-bind="event: {mousedown: viewPtFinder.bind( $data, '<?php echo xla("The search field cannot be empty. Please enter a search term") ?>', '<?php echo attr($search_any_type); ?>')}">
-                                <i class="fa fa-search">&nbsp;</i></button>
-                        </div>
+}
+?>
+<div id="mainBox" <?php echo $disp_mainBox ?>>
+    <nav class="navbar navbar-expand-xl navbar-light bg-light py-0">
+        <?php if ($GLOBALS['display_main_menu_logo'] === '1') : ?>
+            <!-- <a class="navbar-brand" href="https://www.open-emr.org" title="OpenEMR <?php echo xla("Website"); ?>" rel="noopener" target="_blank"> -->
+                <a class="navbar-brand" href="https://www.open-emr.org" title="NeoCareX" rel="noopener"
+                <img src="<?php echo $menuLogo; ?>" class="d-inline-block align-middle" height="16" alt="<?php echo xlt('Main Menu Logo'); ?>">
+            </a>
+        <?php endif; ?>
+        <button class="navbar-toggler mr-auto" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
+        <?php if ($GLOBALS['search_any_patient'] != 'none') : ?>
+            <form name="frm_search_globals" class="form-inline">
+                <div class="input-group">
+                    <input type="text" id="anySearchBox" class="form-control-sm <?php echo $any_search_class ?> form-control" name="anySearchBox" placeholder="<?php echo xla("Search by any demographics") ?>" autocomplete="off">
+                    <div class="input-group-append">
+                        <button type="button" id="search_globals" class="btn btn-sm btn-secondary <?php echo $search_globals_class ?>" title='<?php echo xla("Search for patient by entering whole or part of any demographics field information"); ?>' data-bind="event: {mousedown: viewPtFinder.bind( $data, '<?php echo xla("The search field cannot be empty. Please enter a search term") ?>', '<?php echo attr($search_any_type); ?>')}">
+                            <i class="fa fa-search">&nbsp;</i></button>
                     </div>
-                </form>
-            <?php endif; ?>
-            <!--Below is the user data section that contains the user information and the attendant data-->
-            <span id="userData" data-bind="template: {name: 'user-data-template', data: application_data}"></span>
-            <?php
-            // fire off a nav event
-            $dispatcher->dispatch(new RenderEvent(), RenderEvent::EVENT_BODY_RENDER_NAV);
-            ?>
-        </nav>
-        <div id="attendantData" class="body_title acck" data-bind="template: {name: app_view_model.attendant_template_type, data: application_data}"></div>
-        <div class="body_title" id="tabs_div" data-bind="template: {name: 'tabs-controls', data: application_data}"></div>
-        <div class="mainFrames d-flex flex-row" id="mainFrames_div">
-            <div id="framesDisplay" data-bind="template: {name: 'tabs-frames', data: application_data}"></div>
-        </div>
-        <?php echo $twig->render("product_registration/product_registration_modal.html.twig", [
-            'webroot' => $webroot,
-            'allowEmail' => $allowEmail ?? false,
-            'allowTelemetry' => $allowTelemetry ?? false]); ?>
+                </div>
+            </form>
+        <?php endif; ?>
+        <span id="userData" data-bind="template: {name: 'user-data-template', data: application_data}"></span>
+    </nav>
+    <div id="attendantData" class="body_title acck" data-bind="template: {name: app_view_model.attendant_template_type, data: application_data}"></div>
+    <div class="body_title" id="tabs_div" data-bind="template: {name: 'tabs-controls', data: application_data}"></div>
+    <div class="mainFrames d-flex flex-row" id="mainFrames_div">
+        <div id="framesDisplay" data-bind="template: {name: 'tabs-frames', data: application_data}"></div>
     </div>
-    <script>
-        ko.applyBindings(app_view_model);
+    <?php echo $twig->render("product_registration/product_registration_modal.html.twig", [
+        'webroot' => $webroot,
+        'allowEmail' => $allowEmail ?? false,
+        'allowTelemetry' => $allowTelemetry ?? false]); ?>
+</div>
+<script>
+    ko.applyBindings(app_view_model);
 
         $(function () {
             $('.dropdown-toggle').dropdown();
