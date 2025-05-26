@@ -1154,6 +1154,7 @@ INSERT INTO `codes` (`code_text`,`code`,`code_type`) VALUES ('mg','C28253',112);
 --
 -- Table structure for table `contact`
 --
+DROP TABLE IF EXISTS `contact`;
 CREATE TABLE `contact` (
    `id` BIGINT(20) NOT NULL auto_increment,
    `foreign_table_name` VARCHAR(255) NOT NULL DEFAULT '',
@@ -1166,7 +1167,8 @@ CREATE TABLE `contact` (
 --
 -- Table structure for table `contact_address`
 --
-CREATE TABLE `contact_address` (
+DROP TABLE IF EXISTS `contact_address`;
+    CREATE TABLE `contact_address` (
     `id` BIGINT(20) NOT NULL auto_increment,
     `contact_id` BIGINT(20) NOT NULL,
     `address_id` BIGINT(20) NOT NULL,
@@ -1538,7 +1540,7 @@ CREATE TABLE `eligibility_verification` (
 --
 -- Table structure for table `email_queue`
 --
-
+DROP TABLE IF EXISTS `email_queue`;
 CREATE TABLE `email_queue` (
   `id` bigint NOT NULL auto_increment,
   `sender` varchar(255) DEFAULT '',
@@ -1782,7 +1784,7 @@ CREATE TABLE  `facility_user_ids` (
   KEY `uuid` (`uuid`)
 ) ENGINE=InnoDB  AUTO_INCREMENT=1;
 
------------------------------------------------------------
+-- ---------------------------------------------------------
 
 --
 -- Table structure for table `fee_schedule`
@@ -1802,7 +1804,7 @@ CREATE TABLE `fee_schedule` (
     UNIQUE KEY `ins_plan_code_mod_type_date` (`insurance_company_id`, `plan`, `code`, `modifier`, `type`, `effective_date`)
 ) ENGINE=InnoDb AUTO_INCREMENT=1;
 
------------------------------------------------------------
+-- ---------------------------------------------------------
 
 --
 -- Table structure for table `fee_sheet_options`
@@ -4104,7 +4106,7 @@ INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) V
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','3','capsule'    ,3,0,'NCI-CONCEPT-ID:C25158');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','4','solution'   ,4,0,'NCI-CONCEPT-ID:C42986');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','5','tsp'        ,5,0,'NCI-CONCEPT-ID:C48544');
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','6','ml'         ,6,0,'NCI-CONCEPT-ID:C28254');
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','6','mL'         ,6,0,'NCI-CONCEPT-ID:C28254');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','7','units'      ,7,0,'NCI-CONCEPT-ID:C44278');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','8','inhalations',8,0,'NCI-CONCEPT-ID:C42944');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, codes ) VALUES ('drug_form','9','gtts(drops)',9,0,'NCI-CONCEPT-ID:C48491');
@@ -4127,10 +4129,10 @@ INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) V
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '3','To Skin'          , 3,0, 'OTH');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '4','To Affected Area' , 4,0, 'OTH');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '5','Sublingual'       , 5,0, 'OTH');
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '6','OS'               , 6,0, 'OTH');
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '7','OD'               , 7,0, 'OTH');
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '8','OU'               , 8,0, 'OTH');
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '9','SQ'               , 9,0, 'OTH');
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '6','Left Eye'         , 6,0, 'OTH');
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '7','Right Eye'        , 7,0, 'OTH');
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '8','Each Eye'         , 8,0, 'OTH');
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route', '9','Subcutaneous'     , 9,0, 'OTH');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes, codes ) VALUES ('drug_route','10','IM'               ,10,0, 'IM', 'NCI-CONCEPT-ID:C28161');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route','11','IV'               ,11,0, 'IV');
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default, notes ) VALUES ('drug_route','12','Per Nostril'      ,12,0, 'NS');
@@ -4152,7 +4154,7 @@ INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES (
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','6','q.5h'  ,6,0);
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','7','q.6h'  ,7,0);
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','8','q.8h'  ,8,0);
-INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','9','q.d.'  ,9,0);
+INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','9','Daily' ,9,0);
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','10','a.c.'  ,10,0);
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','11','p.c.'  ,11,0);
 INSERT INTO list_options ( list_id, option_id, title, seq, is_default ) VALUES ('drug_interval','12','a.m.'  ,12,0);
@@ -10617,7 +10619,7 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `ac
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'tg_add#add-participant-form', '/interface/therapy_groups/index.php?method=groupParticipants', 130, '{"participant_name":{"presence": true}, "group_patient_start":{"presence": true}}', 1);
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'common#new-encounter-form', '/interface/forms/newGroupEncounter/common.php', 160, '{"pc_catid":{"exclusion": ["_blank"]}}', 1);
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'add_edit_event#theform_groups','/interface/main/calendar/add_edit_event.php?group=true',150, '{"form_group":{"presence": true}}', 1);
-INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'add_edit_event#theform_prov', '/interface/main/calendar/add_edit_event.php?prov=true', 170, '{}',  1);
+INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'add_edit_event#theform_prov', '/interface/main/calendar/add_edit_event.php?prov=true', 170, '{"form_title":{"presence": {"message": "Title Required"}}}',  1);
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `notes`, `activity`) VALUES ('page_validation', 'messages#new_note','/interface/main/messages/messages.php',150, '{"form_datetime":{"futureDate":{"message": "Must be future date"}}, "reply_to":{"presence": {"message": "Please choose a patient"}}, "note":{"presence": {"message": "Please enter a note"}}}', 1);
 
 -- void reasons list
@@ -12227,9 +12229,14 @@ CREATE TABLE `form_taskman` (
 
 DROP TABLE IF EXISTS `product_registration`;
 CREATE TABLE `product_registration` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) NULL,
-  `opt_out` TINYINT(1) NULL,
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `email` VARCHAR(255) NULL,
+    `opt_out` TINYINT(1) NULL,
+    `auth_by_id` INT(11) NULL,
+    `telemetry_disabled` TINYINT(1) NULL COMMENT '1 opted out, disabled. NULL ask. 0 use option scopes',
+    `last_ask_date` DATETIME NULL,
+    `last_ask_version`TINYTEXT,
+    `options` TEXT COMMENT 'JSON array of scope options',
   PRIMARY KEY (id)
 ) ENGINE=InnoDB;
 
@@ -13367,6 +13374,9 @@ CREATE TABLE `onetime_auth` (
     `expires` int(11) DEFAULT NULL,
     `date_created` datetime DEFAULT current_timestamp(),
     `last_accessed` datetime DEFAULT NULL,
+    `scope` tinytext COMMENT 'context scope for this token',
+    `profile` tinytext COMMENT 'profile of scope for this token',
+    `onetime_actions` text COMMENT 'JSON array of actions that can be performed with this token',
     PRIMARY KEY (`id`),
     KEY `pid` (`pid`,`onetime_token`(255))
 ) ENGINE=InnoDB;
@@ -13393,6 +13403,7 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('rec
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('recent_patient_columns', 'lname', 'Last Name', '30');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('recent_patient_columns', 'DOB', 'Date of Birth', '40');
 
+DROP TABLE IF EXISTS `recent_patients`;
 CREATE TABLE recent_patients (
     user_id varchar(40) NOT NULL,
     patients TEXT,
@@ -13651,6 +13662,7 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES('nationality_with_country', 'ZM', 'Zambian', '2490', '0', '0', '', 'Zambia', 'ZMB:894');
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`, `is_default`, `option_value`, `mapping`, `notes`, `codes`) VALUES('nationality_with_country', 'ZW', 'Zimbabwean', '2500', '0', '0', '', 'Zimbabwe', 'ZWE:716');
 
+DROP TABLE IF EXISTS `dsi_source_attributes`;
 CREATE TABLE `dsi_source_attributes` (
  `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
  `client_id` VARCHAR(80) NOT NULL,
@@ -13664,7 +13676,7 @@ CREATE TABLE `dsi_source_attributes` (
  `last_updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  PRIMARY KEY (`id`),
  UNIQUE (`list_id`, `option_id`, `client_id`)
-) ENGINE=InnoDB COMMENT = 'Holds information about decission support intervention system source attributes';
+) ENGINE=InnoDB COMMENT = 'Holds information about decision support intervention system source attributes';
 
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`) VALUES ('lists', 'dsi_predictive_source_attributes', 'Predictive Decision Support Interventions Source Attributes');
 -- Populate list with ONC default values
@@ -13715,3 +13727,22 @@ INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('dsi
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('dsi_evidence_source_attributes', 'evidence_based_dob', 'Intervention use of date of birth as expressed in the standards in US § 170.213', 110);
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('dsi_evidence_source_attributes', 'evidence_based_sdoh', 'Intervention use of social determinants of health data as expressed in the standards in US § 170.213', 120);
 INSERT INTO `list_options` (`list_id`, `option_id`, `title`, `seq`) VALUES ('dsi_evidence_source_attributes', 'evidence_based_health_status', 'Intervention use of health status assessments data as expressed in the standards in US § 170.213', 130);
+
+-- -----------------------------------------------------
+--
+-- Table structure for table 'track_events'
+--
+
+DROP TABLE IF EXISTS `track_events`;
+CREATE TABLE `track_events` (
+    `id`                  INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `event_type`     TEXT,
+    `event_label`    VARCHAR(255) DEFAULT NULL,
+    `event_url`       TEXT,
+    `event_target`  TEXT,
+    `first_event`     DATETIME NULL,
+    `last_event`     DATETIME NULL,
+    `label_count`    INT UNSIGNED NOT NULL DEFAULT 1,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_event_label_target` (`event_label`, `event_url`(255), `event_target`(255))
+) ENGINE = InnoDB COMMENT = 'Telemetry Event Data';
