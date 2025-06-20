@@ -587,7 +587,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             <?php if (($GLOBALS['secondary_portal_logo_position'] ?? null) == 'second') { ?>
                 <?php if ($GLOBALS['show_portal_primary_logo'] ?? null) { ?>
                     <div class="img-fluid text-center" style="margin-bottom: -3rem !important;"><img class="login-logo" src='<?php echo $logoSrc; ?>'></div>
-                    <div class="img-fluid text-center" style="margin-bottom: -3rem !important;"><img class="login-logo" src='<?php echo $logoSrc; ?>'></div>
                 <?php } ?>
                 <?php if ($GLOBALS['extra_portal_logo_login'] ?? null) { ?>
                     <div class="img-fluid text-center"><img class="login-logo" src='<?php echo $logo2ndSrc; ?>'></div>
@@ -613,18 +612,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
-                
-                <div class="form-group row">
-                    <label for="uname" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Username') ?></label>
-                    <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
-                        <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
-                    </div>
                 </div>
-                    
-                    
-                    <div id="standard-auth-password" class="form-group row">
-                        <label for="pass" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Password') ?></label>
-                        <div class="col input-group" style="margin-left: -120px !important;margin-right: 160px;">
                     
                     <div id="standard-auth-password" class="form-group row">
                         <label for="pass" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Password') ?></label>
