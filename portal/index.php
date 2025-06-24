@@ -615,7 +615,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
-                </div>
                     <!-- <div id="standard-auth-password" class="form-group">
                         <label for="pass"><?php echo xlt('Password') ?></label>
                         <div class="input-group">
@@ -815,12 +814,6 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                 document.querySelector("div.alert").remove();
             }, 6000);
         }
-
-        $('.patientportal').click(function(){
-            var patientUser = $('#uname').val();
-            var patientEmail = $('#passaddon').val(patientUser);
-        });
-
 
         $('.patientportal').click(function(){
             var patientUser = $('#uname').val();
