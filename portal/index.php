@@ -615,6 +615,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
+                </div>
                     <!-- <div id="standard-auth-password" class="form-group">
                         <label for="pass"><?php echo xlt('Password') ?></label>
                         <div class="input-group">
@@ -680,7 +681,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                 } ?>
                 </div>
                 <div class="col col-md col-sm" style="max-width: 20%; margin-left: 470px;">
-                    <button class="btn btn-success btn-block patientportal" type="submit"><?php echo xlt('Log In'); ?></button>
+                    <button class="btn btn-success btn-block patientportal" style="background-color:#24488e; border-color:#24488e" type="submit"><?php echo xlt('Log In'); ?></button>
                     <?php if (!empty($GLOBALS['portal_onsite_two_register']) && !empty($GLOBALS['google_recaptcha_site_key']) && !empty($GLOBALS['google_recaptcha_secret_key'])) { ?>
                         <button class="btn btn-secondary btn-block" onclick="location.replace('./account/verify.php?site=<?php echo attr_url($_SESSION['site_id']); ?>')"><?php echo xlt('Register'); ?></button>
                     <?php } ?>
