@@ -474,6 +474,16 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             margin-bottom: 20px;
             text-align: center;
         }
+        .col-sm-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 576px) {
+            .col-sm-4 {
+                flex: 0 0 33.33333333%;
+                max-width: 25.33333333%;
+            }
+        }
     </style>
 </head>
 <body class="login">
@@ -615,8 +625,8 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <input type="text" class="form-control" name="uname" id="uname" autocomplete="none" required />
                 </div> -->
                 <div class="form-group row">
-                    <label for="uname" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Username') ?></label>
-                    <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
+                    <label for="uname" class="col-form-label col-sm-4"><?php echo xlt('Username') ?></label>
+                    <div class="col">
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
                 </div>
@@ -632,8 +642,8 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         </div>
                     </div> -->
                     <div id="standard-auth-password" class="form-group row">
-                        <label for="pass" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Password') ?></label>
-                        <div class="col input-group" style="margin-left: -120px !important;margin-right: 160px;">
+                        <label for="pass" class="col-form-label col-sm-4"><?php echo xlt('Password') ?></label>
+                        <div class="col input-group">
                             <input class="form-control" name="pass" id="pass" type="password" required autocomplete="none" />
                             <div class="input-group-append">
                                 <span class="input-group-text">
@@ -684,15 +694,17 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <?php }
                 } ?>
                 </div>
-                <div class="col col-md col-sm" style="max-width: 20%; margin-left: 470px;">
-                    <button class="btn btn-success btn-block patientportal" style="background-color:#24488e; border-color:#24488e" type="submit"><?php echo xlt('Log In'); ?></button>
-                    <div>
-                        <button id="google-login-btn" class="text-center mt-3">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" style="height: 20px;">
-                            Sign in with Google
-                        </button>
+                <div class="col col-md col-sm">
+                    <div class="d-flex flex-column align-items-end">
+                        <button class="btn btn-success btn-block patientportal mb-2" style="background-color:#24488e; border-color:#24488e; max-width:24%; margin-right: -7px; padding-top: 1px;" type="submit"><?php echo xlt('Log In'); ?></button>
+                        
+                        <div style="max-width:24%; margin-top: -6px; margin-right: -7px;">
+                            <button id="google-login-btn" class="text-center mt-3">
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" style="height: 20px;">
+                                Sign in with Google
+                            </button>
+                        </div>
                     </div>
-                    
                     <?php if (!empty($GLOBALS['portal_onsite_two_register']) && !empty($GLOBALS['google_recaptcha_site_key']) && !empty($GLOBALS['google_recaptcha_secret_key'])) { ?>
                         <button class="btn btn-secondary btn-block" onclick="location.replace('./account/verify.php?site=<?php echo attr_url($_SESSION['site_id']); ?>')"><?php echo xlt('Register'); ?></button>
                     <?php } ?>
