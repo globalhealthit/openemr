@@ -66,6 +66,9 @@ namespace OpenEMR\Common\Session;
 
 use OpenEMR\Common\Logging\SystemLogger;
 use OpenEMR\Common\Session\Predis\SentinelUtil;
+use OpenEMR\Common\Session\SessionConfigurationBuilder;
+
+require __DIR__ . '/../../../vendor/autoload.php';
 
 class SessionUtil
 {
