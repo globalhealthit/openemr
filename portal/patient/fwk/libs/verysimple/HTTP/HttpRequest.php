@@ -27,7 +27,7 @@ class HttpRequest
      * @param
      *          $params
      */
-    static function RestRequest($endpoint, $method, $params = array())
+    static function RestRequest($endpoint, $method, $params = [])
     {
         $qs = HttpRequest::ArrayToQueryString($params);
         $ch = null;
@@ -54,9 +54,9 @@ class HttpRequest
                 break;
         }
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array (
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 "Expect:  "
-        )); // Fixes the HTTP/1.1 417 Expectation Failed Bug
+        ]); // Fixes the HTTP/1.1 417 Expectation Failed Bug
 
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -168,7 +168,7 @@ class HttpRequest
     static function FilePost($url, $data = "", $verify_cert = false, $timeout = 30)
     {
         $qs = HttpRequest::ArrayToQueryString($data);
-        $url = $url . ($qs ? "?" . $qs : "");
+        $url .= $qs ? "?" . $qs : "";
 
         $show_headers = false;
         $url = parse_url($url);
@@ -181,7 +181,7 @@ class HttpRequest
             }
         }
 
-        $url ['query'] = isset($url ['query']) ? $url ['query'] : '';
+        $url ['query'] ??= '';
 
         $url ['protocol'] = $url ['scheme'] . '://';
         $eol = "\r\n";
@@ -189,7 +189,7 @@ class HttpRequest
         $headers = "POST " . $url ['protocol'] . $url ['host'] . $url ['path'] . " HTTP/1.0" . $eol . "Host: " . $url ['host'] . $eol . "Referer: " . $url ['protocol'] . $url ['host'] . $url ['path'] . $eol . "Content-Type: application/x-www-form-urlencoded" . $eol . "Content-Length: " . strlen($url ['query']) . $eol . $eol . $url ['query'];
         $fp = fsockopen($url ['host'], $url ['port'], $errno, $errstr, 30);
         if ($fp) {
-            fputs($fp, $headers);
+            fwrite($fp, $headers);
             $result = '';
             while (! feof($fp)) {
                 $result .= fgets($fp, 128);
@@ -294,9 +294,9 @@ class HttpRequest
 
                 // if the PUT request contains JSON data then add the content type header
                 if (json_encode($data)) {
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, array (
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
                             "Content-Type: application/json"
-                    ));
+                    ]);
                 }
 
                 curl_setopt($ch, CURLOPT_INFILE, $fp);
@@ -308,9 +308,9 @@ class HttpRequest
             $ch = curl_init($full_url);
         }
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array (
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 "Expect:  "
-        )); // Fixes the HTTP/1.1 417 Expectation Failed Bug
+        ]); // Fixes the HTTP/1.1 417 Expectation Failed Bug
 
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);

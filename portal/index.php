@@ -30,6 +30,11 @@ OpenEMR\Common\Session\SessionUtil::portalSessionStart();
 //don't require standard openemr authorization in globals.php
 $ignoreAuth_onsite_portal = true;
 
+if ($_SESSION['authenticated'] === true) {
+    header("Location: ./home.php");
+    exit;
+}
+
 //includes
 
 require_once '../interface/globals.php';
@@ -46,9 +51,13 @@ use OpenEMR\Common\Logging\SystemLogger;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 use OpenEMR\Services\LogoService;
+use Dotenv\Dotenv;
+
+$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+$dotenv->safeLoad();
 
 //For redirect if the site on session does not match
-$landingpage = $GLOBALS['web_root'] . "/portal/index.php?site=" . urlencode($_SESSION['site_id']);
+$landingpage = $GLOBALS['web_root'] . "/portal/index.php?site=" . urlencode((string) $_SESSION['site_id']);
 $logoService = new LogoService();
 $logoSrc = $logoService->getLogo("portal/login/primary");
 $logo2ndSrc = $logoService->getLogo("portal/login/secondary"); /*rm - add secondary logo */
@@ -250,7 +259,7 @@ if (!empty($_GET['forward_email_verify'])) {
         if ($crypto->cryptCheckStandard($_GET['forward'])) {
             $one_time = $crypto->decryptStandard($_GET['forward'], null, 'drive', 6);
             if (!empty($one_time)) {
-                $auth = sqlQueryNoLog("Select * From patient_access_onsite Where portal_onetime Like BINARY ?", array($one_time . '%'));
+                $auth = sqlQueryNoLog("Select * From patient_access_onsite Where portal_onetime Like BINARY ?", [$one_time . '%']);
             }
         }
     }
@@ -286,7 +295,7 @@ $_SESSION['itsme'] = 1;
 //
 // collect default language id (skip this if this is a password update or reset)
 if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_reset']) && !empty($GLOBALS['google_recaptcha_site_key']) && !empty($GLOBALS['google_recaptcha_secret_key']) && isset($_GET['requestNew'])))) {
-    $res2 = sqlStatement("select * from lang_languages where lang_description = ?", array($GLOBALS['language_default']));
+    $res2 = sqlStatement("select * from lang_languages where lang_description = ?", [$GLOBALS['language_default']]);
     for ($iter = 0; $row = sqlFetchArray($res2); $iter++) {
         $result2[$iter] = $row;
     }
@@ -315,7 +324,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             "LEFT JOIN lang_definitions AS ld ON ld.cons_id = lc.cons_id AND " .
             "ld.lang_id = ? " .
             "ORDER BY IF(LENGTH(ld.definition),ld.definition,ll.lang_description), ll.lang_id";
-        $res3 = SqlStatement($sql, array($mainLangID));
+        $res3 = sqlStatement($sql, [$mainLangID]);
         for ($iter = 0; $row = sqlFetchArray($res3); $iter++) {
             $result3[$iter] = $row;
         }
@@ -470,6 +479,26 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             margin-bottom: 20px;
             text-align: center;
         }
+        .col-sm-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        @media (min-width: 576px) {
+            .col-sm-4 {
+                flex: 0 0 33.33333333%;
+                max-width: 25.33333333%;
+            }
+        }
+        @media (min-width: 320px) and (max-width: 576px) {
+            .google-login-button {
+                width: 30% !important;
+            }
+        }
+        @media (max-width: 1366px) and (max-height: 768px) {
+            .login {
+                zoom: 0.8;
+            }
+        }
     </style>
 </head>
 <body class="login">
@@ -586,7 +615,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
             <!-- Optionally show two logos, and in either order -->
             <?php if (($GLOBALS['secondary_portal_logo_position'] ?? null) == 'second') { ?>
                 <?php if ($GLOBALS['show_portal_primary_logo'] ?? null) { ?>
-                    <div class="img-fluid text-center" style="margin-bottom: -3rem !important;"><img class="login-logo" src='<?php echo $logoSrc; ?>'></div>
+                    <div class="img-fluid text-center" style="margin-bottom: -6rem !important;"><img class="login-logo" src='<?php echo $logoSrc; ?>'></div>
                 <?php } ?>
                 <?php if ($GLOBALS['extra_portal_logo_login'] ?? null) { ?>
                     <div class="img-fluid text-center"><img class="login-logo" src='<?php echo $logo2ndSrc; ?>'></div>
@@ -611,8 +640,8 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <input type="text" class="form-control" name="uname" id="uname" autocomplete="none" required />
                 </div> -->
                 <div class="form-group row">
-                    <label for="uname" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Username') ?></label>
-                    <div class="col" style="margin-left: -120px !important;margin-right: 160px;">
+                    <label for="uname" class="col-form-label col-sm-4"><?php echo xlt('Username') ?></label>
+                    <div class="col">
                         <input type="text" class="form-control" id="uname" name="uname" autocomplete="none" required>
                     </div>
                 </div>
@@ -628,8 +657,8 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         </div>
                     </div> -->
                     <div id="standard-auth-password" class="form-group row">
-                        <label for="pass" class="col-form-label col-sm-4" style="margin-left: 50px;"><?php echo xlt('Password') ?></label>
-                        <div class="col input-group" style="margin-left: -120px !important;margin-right: 160px;">
+                        <label for="pass" class="col-form-label col-sm-4"><?php echo xlt('Password') ?></label>
+                        <div class="col input-group">
                             <input class="form-control" name="pass" id="pass" type="password" required autocomplete="none" />
                             <div class="input-group-append">
                                 <span class="input-group-text">
@@ -639,7 +668,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         </div>
                     </div>
                 <?php if ($GLOBALS['enforce_signin_email']) { ?>
-                    <!-- <div class="form-group">
+                     <!-- <div class="form-group">
                         <label for="passaddon"><?php echo xlt('E-Mail Address') ?></label>
                         <input class="form-control" name="passaddon" id="passaddon" type="email" autocomplete="none" />
                     </div> -->
@@ -680,8 +709,24 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                     <?php }
                 } ?>
                 </div>
-                <div class="col col-md col-sm" style="max-width: 20%; margin-left: 470px;">
-                    <button class="btn btn-success btn-block patientportal" style="background-color:#24488e; border-color:#24488e" type="submit"><?php echo xlt('Log In'); ?></button>
+                <div class="col col-md col-sm">
+                    <div class="d-flex justify-content-end align-items-center" style="gap: 10px;">
+                        <!-- Auth0 Login Button -->
+                        <div class="google-login-button" style="width:24%;">
+                            <button class="text-center w-100" style="min-height:42px;">
+                                <a href="auth_login.php">
+                                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon" style="height: 20px;">
+                                    Google Sign-In
+                                </a>
+                            </button>
+                        </div>
+                        <!-- Login Button -->
+                        <button class="btn btn-success btn-block patientportal"
+                                style="background-color:#24488e; border-color:#24488e; width:24%; padding-top: 1px; margin-right: -7px; min-height:42px; padding:8px 12px;"
+                                type="submit">
+                            <?php echo xlt('Log In'); ?>
+                        </button>
+                    </div>
                     <?php if (!empty($GLOBALS['portal_onsite_two_register']) && !empty($GLOBALS['google_recaptcha_site_key']) && !empty($GLOBALS['google_recaptcha_secret_key'])) { ?>
                         <button class="btn btn-secondary btn-block" onclick="location.replace('./account/verify.php?site=<?php echo attr_url($_SESSION['site_id']); ?>')"><?php echo xlt('Register'); ?></button>
                     <?php } ?>

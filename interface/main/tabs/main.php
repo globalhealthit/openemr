@@ -96,33 +96,34 @@ $twig = (new TwigContainer(null, $GLOBALS['kernel']))->getTwig();
     window.opener = null;
     window.name = "main";
 
-    // This flag indicates if another window or frame is trying to reload the login
-    // page to this top-level window.  It is set by javascript returned by auth.inc.php
-    // and is checked by handlers of beforeunload events.
-    var timed_out = false;
-    // some globals to access using top.variable
-    // note that 'let' or 'const' does not allow global scope here.
-    // only use var
-    var isPortalEnabled = "<?php echo $GLOBALS['portal_onsite_two_enable'] ?>";
-    // Set the csrf_token_js token that is used in the below js/tabs_view_model.js script
-    var csrf_token_js = <?php echo js_escape(CsrfUtils::collectCsrfToken()); ?>;
-    var userDebug = <?php echo js_escape($GLOBALS['user_debug']); ?>;
-    var webroot_url = <?php echo js_escape($web_root); ?>;
-    var jsLanguageDirection = <?php echo js_escape($_SESSION['language_direction']); ?> || 'ltr';
-    var jsGlobals = {};
-    // used in tabs_view_model.js.
-    jsGlobals.enable_group_therapy = <?php echo js_escape($GLOBALS['enable_group_therapy']); ?>;
-    jsGlobals.languageDirection = jsLanguageDirection;
-    jsGlobals.date_display_format = <?php echo js_escape($GLOBALS['date_display_format']); ?>;
-    jsGlobals.time_display_format = <?php echo js_escape($GLOBALS['time_display_format']); ?>;
-    jsGlobals.timezone = <?php echo js_escape($GLOBALS['gbl_time_zone'] ?? ''); ?>;
-    jsGlobals.assetVersion = <?php echo js_escape($GLOBALS['v_js_includes']); ?>;
-    var WindowTitleAddPatient = <?php echo($GLOBALS['window_title_add_patient_name'] ? 'true' : 'false'); ?>;
-    var WindowTitleBase = <?php echo js_escape($openemr_name); ?>;
-    const isSms = "<?php echo !empty($GLOBALS['oefax_enable_sms'] ?? null); ?>";
-    const isFax = "<?php echo !empty($GLOBALS['oefax_enable_fax']) ?? null?>";
-    const isServicesOther = (isSms || isFax);
-    var telemetryEnabled = <?php echo js_escape(TelemetryService::isTelemetryEnabled()); ?>;
+        // This flag indicates if another window or frame is trying to reload the login
+        // page to this top-level window.  It is set by javascript returned by auth.inc.php
+        // and is checked by handlers of beforeunload events.
+        var timed_out = false;
+        // some globals to access using top.variable
+        // note that 'let' or 'const' does not allow global scope here.
+        // only use var
+        var isPortalEnabled = "<?php echo $GLOBALS['portal_onsite_two_enable'] ?>";
+        // Set the csrf_token_js token that is used in the below js/tabs_view_model.js script
+        var csrf_token_js = <?php echo js_escape(CsrfUtils::collectCsrfToken()); ?>;
+        var userDebug = <?php echo js_escape($GLOBALS['user_debug']); ?>;
+        var webroot_url = <?php echo js_escape($web_root); ?>;
+        var jsLanguageDirection = <?php echo js_escape($_SESSION['language_direction']); ?> ||
+        'ltr';
+        var jsGlobals = {};
+        // used in tabs_view_model.js.
+        jsGlobals.enable_group_therapy = <?php echo js_escape($GLOBALS['enable_group_therapy']); ?>;
+        jsGlobals.languageDirection = jsLanguageDirection;
+        jsGlobals.date_display_format = <?php echo js_escape($GLOBALS['date_display_format']); ?>;
+        jsGlobals.time_display_format = <?php echo js_escape($GLOBALS['time_display_format']); ?>;
+        jsGlobals.timezone = <?php echo js_escape($GLOBALS['gbl_time_zone'] ?? ''); ?>;
+        jsGlobals.assetVersion = <?php echo js_escape($GLOBALS['v_js_includes']); ?>;
+        var WindowTitleAddPatient = <?php echo($GLOBALS['window_title_add_patient_name'] ? 'true' : 'false'); ?>;
+        var WindowTitleBase = <?php echo js_escape($openemr_name); ?>;
+        const isSms = "<?php echo !empty($GLOBALS['oefax_enable_sms'] ?? null); ?>";
+        const isFax = "<?php echo !empty($GLOBALS['oefax_enable_fax']) ?? null?>";
+        const isServicesOther = (isSms || isFax);
+        var telemetryEnabled = <?php echo js_escape((new TelemetryService())->isTelemetryEnabled()); ?>;
 
     /**
      * Async function to get session value from the server
@@ -335,16 +336,16 @@ $twig = (new TwigContainer(null, $GLOBALS['kernel']))->getTwig();
 <script src="js/dialog_utils.js?v=<?php echo $v_js_includes; ?>"></script>
 <script src="js/shortcuts.js?v=<?php echo $v_js_includes; ?>"></script>
 
-<?php
-// Below code block is to prepare certain elements for deciding what links to show on the menu
-// prepare newcrop globals that are used in creating the menu
-if ($GLOBALS['erx_enable']) {
-    $newcrop_user_role_sql = sqlQuery("SELECT `newcrop_user_role` FROM `users` WHERE `username` = ?", array($_SESSION['authUser']));
-    $GLOBALS['newcrop_user_role'] = $newcrop_user_role_sql['newcrop_user_role'];
-    if ($GLOBALS['newcrop_user_role'] === 'erxadmin') {
-        $GLOBALS['newcrop_user_role_erxadmin'] = 1;
+    <?php
+    // Below code block is to prepare certain elements for deciding what links to show on the menu
+    // prepare newcrop globals that are used in creating the menu
+    if ($GLOBALS['erx_enable']) {
+        $newcrop_user_role_sql = sqlQuery("SELECT `newcrop_user_role` FROM `users` WHERE `username` = ?", [$_SESSION['authUser']]);
+        $GLOBALS['newcrop_user_role'] = $newcrop_user_role_sql['newcrop_user_role'];
+        if ($GLOBALS['newcrop_user_role'] === 'erxadmin') {
+            $GLOBALS['newcrop_user_role_erxadmin'] = 1;
+        }
     }
-}
 
 // prepare track anything to be used in creating the menu
 $track_anything_sql = sqlQuery("SELECT `state` FROM `registry` WHERE `directory` = 'track_anything'");
@@ -353,45 +354,45 @@ $GLOBALS['track_anything_state'] = ($track_anything_sql['state'] ?? 0);
 $GLOBALS['allow_issue_menu_link'] = ((AclMain::aclCheckCore('encounters', 'notes', '', 'write') || AclMain::aclCheckCore('encounters', 'notes_a', '', 'write')) &&
     AclMain::aclCheckCore('patients', 'med', '', 'write'));
 
-// we use twig templates here so modules can customize some of these files
-// at some point we will twigify all of main.php so we can extend it.
-echo $twig->render("interface/main/tabs/tabs_template.html.twig", []);
-echo $twig->render("interface/main/tabs/menu_template.html.twig", []);
-// TODO: patient_data_template.php is a more extensive refactor that could be done in a future feature request but to not jeopardize 7.0.3 release we will hold off.
-?>
-<?php require_once("templates/patient_data_template.php"); ?>
-<?php
-echo $twig->render("interface/main/tabs/therapy_group_template.html.twig", []);
-echo $twig->render("interface/main/tabs/user_data_template.html.twig", [
-    'openemr_name' => $GLOBALS['openemr_name']
-]);
-// Collect the menu then build it
-$menuMain = new MainMenuRole($GLOBALS['kernel']->getEventDispatcher());
-$menu_restrictions = $menuMain->getMenu();
-echo $twig->render("interface/main/tabs/menu_json.html.twig", ['menu_restrictions' => $menu_restrictions]);
-?>
-<?php $userQuery = sqlQuery("select * from users where username = ?", array($_SESSION['authUser'])); ?>
-
-<script>
-    <?php
-    if ($_SESSION['default_open_tabs']) :
-        // For now, only the first tab is visible, this could be improved upon by further customizing the list options in a future feature request
-        $visible = "true";
-        foreach ($_SESSION['default_open_tabs'] as $i => $tab) :
-            $_unsafe_url = preg_replace('/(\?.*)/m', '', Path::canonicalize($fileroot . DIRECTORY_SEPARATOR . $tab['notes']));
-            if (realpath($_unsafe_url) === false || strpos($_unsafe_url, $fileroot) !== 0) {
-                unset($_SESSION['default_open_tabs'][$i]);
-                continue;
-            }
-            $url = json_encode($webroot . "/" . $tab['notes']);
-            $target = json_encode($tab['option_id']);
-            $label = json_encode(xl("Loading") . " " . $tab['title']);
-            $loading = xlj("Loading");
-            echo "app_view_model.application_data.tabs.tabsList.push(new tabStatus($label, $url, $target, $loading, true, $visible, false));\n";
-            $visible = "false";
-        endforeach;
-    endif;
+    // we use twig templates here so modules can customize some of these files
+    // at some point we will twigify all of main.php so we can extend it.
+    echo $twig->render("interface/main/tabs/tabs_template.html.twig", []);
+    echo $twig->render("interface/main/tabs/menu_template.html.twig", []);
+    // TODO: patient_data_template.php is a more extensive refactor that could be done in a future feature request but to not jeopardize 7.0.3 release we will hold off.
     ?>
+    <?php require_once("templates/patient_data_template.php"); ?>
+    <?php
+    echo $twig->render("interface/main/tabs/therapy_group_template.html.twig", []);
+    echo $twig->render("interface/main/tabs/user_data_template.html.twig", [
+        'openemr_name' => $GLOBALS['openemr_name']
+    ]);
+    // Collect the menu then build it
+    $menuMain = new MainMenuRole($GLOBALS['kernel']->getEventDispatcher());
+    $menu_restrictions = $menuMain->getMenu();
+    echo $twig->render("interface/main/tabs/menu_json.html.twig", ['menu_restrictions' => $menu_restrictions]);
+    ?>
+    <?php $userQuery = sqlQuery("select * from users where username = ?", [$_SESSION['authUser']]); ?>
+
+    <script>
+        <?php
+        if ($_SESSION['default_open_tabs']) :
+            // For now, only the first tab is visible, this could be improved upon by further customizing the list options in a future feature request
+            $visible = "true";
+            foreach ($_SESSION['default_open_tabs'] as $i => $tab) :
+                $_unsafe_url = preg_replace('/(\?.*)/m', '', Path::canonicalize($fileroot . DIRECTORY_SEPARATOR . $tab['notes']));
+                if (realpath($_unsafe_url) === false || !str_starts_with($_unsafe_url, (string) $fileroot)) {
+                    unset($_SESSION['default_open_tabs'][$i]);
+                    continue;
+                }
+                $url = json_encode($webroot . "/" . $tab['notes']);
+                $target = json_encode($tab['option_id']);
+                $label = json_encode(xl("Loading") . " " . $tab['title']);
+                $loading = xlj("Loading");
+                echo "app_view_model.application_data.tabs.tabsList.push(new tabStatus($label, $url, $target, $loading, true, $visible, false));\n";
+                $visible = "false";
+            endforeach;
+        endif;
+        ?>
 
     app_view_model.application_data.user(new user_data_view_model(<?php echo json_encode($_SESSION["authUser"])
         . ',' . json_encode($userQuery['fname'])
@@ -409,16 +410,13 @@ echo $twig->render("interface/main/tabs/menu_json.html.twig", ['menu_restriction
 </head>
 
 <body class="min-vw-100">
-<?php
-// fire off an event here
-if (!empty($GLOBALS['kernel']->getEventDispatcher())) {
-    /**
-     * @var \Symfony\Component\EventDispatcher\EventDispatcher
-     */
-    $dispatcher = $GLOBALS['kernel']->getEventDispatcher();
-    $dispatcher->dispatch(new RenderEvent(), RenderEvent::EVENT_BODY_RENDER_PRE);
-}
-?>
+    <?php
+    // fire off an event here
+    if (!empty($GLOBALS['kernel']->getEventDispatcher())) {
+        $dispatcher = $GLOBALS['kernel']->getEventDispatcher();
+        $dispatcher->dispatch(new RenderEvent(), RenderEvent::EVENT_BODY_RENDER_PRE);
+    }
+    ?>
     <!-- Below iframe is to support logout, which needs to be run in an inner iframe to work as intended -->
     <iframe name="logoutinnerframe" id="logoutinnerframe" style="visibility:hidden; position:absolute; left:0; top:0; height:0; width:0; border:none;" src="about:blank"></iframe>
     <?php // mdsupport - app settings
@@ -426,28 +424,28 @@ if (!empty($GLOBALS['kernel']->getEventDispatcher())) {
     if (isset($_SESSION['app1'])) {
         $rs = sqlquery(
             "SELECT title app_url FROM list_options WHERE activity=1 AND list_id=? AND option_id=?",
-            array('apps', $_SESSION['app1'])
+            ['apps', $_SESSION['app1']]
         );
         if ($rs['app_url'] != "main/main_screen.php") {
             echo '<iframe name="app1" src="../../' . attr($rs['app_url']) . '"
-    			style="position: absolute; left: 0; top: 0; height: 100%; width: 100%; border: none;" />';
-            $disp_mainBox = 'style="display: none;"';
-        }
+            style="position: absolute; left: 0; top: 0; height: 100%; width: 100%; border: none;" />';
+        $disp_mainBox = 'style="display: none;"';
     }
-    ?>
-    <div id="mainBox" <?php echo $disp_mainBox ?>>
-        <nav class="navbar navbar-expand-xl navbar-light bg-light py-0">
-            <?php if ($GLOBALS['display_main_menu_logo'] === '1') : ?>
-                <!-- <?php echo xla("CareX"); ?> -->
-                <a class="navbar-brand" href="https://www.open-emr.org" title="NeoCareX" rel="noopener" target="_blank">
-                    <img src="<?php echo $menuLogo;?>" class="d-inline-block align-middle" height="16" alt="<?php echo xlt('Main Menu Logo');?>">
-                </a>
-            <?php endif; ?>
-            <button class="navbar-toggler mr-auto" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
-            <?php if ($GLOBALS['search_any_patient'] != 'none') : ?>
+}
+?>
+<div id="mainBox" <?php echo $disp_mainBox ?>>
+    <nav class="navbar navbar-expand-xl navbar-light bg-light py-0">
+        <?php if ($GLOBALS['display_main_menu_logo'] === '1') : ?>
+           <!-- <a class="navbar-brand" href="https://www.open-emr.org" title="OpenEMR <?php echo xla("Website"); ?>" rel="noopener" target="_blank"> -->
+                <a class="navbar-brand" href="https://www.open-emr.org" title="NeoCareX" rel="noopener"
+                <img src="<?php echo $menuLogo; ?>" class="d-inline-block align-middle" height="16" alt="<?php echo xlt('Main Menu Logo'); ?>">
+            </a>
+        <?php endif; ?>
+        <button class="navbar-toggler mr-auto" type="button" data-toggle="collapse" data-target="#mainMenu" aria-controls="mainMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainMenu" data-bind="template: {name: 'menu-template', data: application_data}"></div>
+        <?php if ($GLOBALS['search_any_patient'] != 'none') : ?>
             <form name="frm_search_globals" class="form-inline">
                 <div class="input-group">
                     <input type="text" id="anySearchBox" class="form-control-sm <?php echo $any_search_class ?> form-control" name="anySearchBox" placeholder="<?php echo xla("Search by any demographics") ?>" autocomplete="off">
