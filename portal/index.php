@@ -668,7 +668,7 @@ if (!(isset($_SESSION['password_update']) || (!empty($GLOBALS['portal_two_pass_r
                         </div>
                     </div>
                 <?php if ($GLOBALS['enforce_signin_email']) { ?>
-                    <!-- <div class="form-group">
+                     <!-- <div class="form-group">
                         <label for="passaddon"><?php echo xlt('E-Mail Address') ?></label>
                         <input class="form-control" name="passaddon" id="passaddon" type="email" autocomplete="none" />
                     </div> -->
