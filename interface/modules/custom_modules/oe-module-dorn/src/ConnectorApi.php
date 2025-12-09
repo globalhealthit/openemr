@@ -103,7 +103,7 @@ class ConnectorApi
     {
         $api_server = ConnectorApi::getServerInfo();
         $url = $api_server . "/api/Orders/v1/SendLabOrder";
-        $base64 = base64_encode($hl7);
+        $base64 = base64_encode((string) $hl7);
         $data = new LabOrderViewModel();
         $data->labGuid = $labGuid . '';
         $data->orderNumber = $orderNumber . '';
@@ -211,7 +211,7 @@ class ConnectorApi
         $api_server = ConnectorApi::getServerInfo();
         $url = $api_server . "/api/Customer/v1/GetPrimaryInfoByNpi";
         if ($npi) {
-            $params = array('npi' => $npi);
+            $params = ['npi' => $npi];
             $url = $url . '?' . http_build_query($params);
         }
 
@@ -224,7 +224,7 @@ class ConnectorApi
         $api_server = ConnectorApi::getServerInfo();
         $url = $api_server . "/api/Customer/v1/SearchPrimaryInfo";
         if ($npi) {
-            $params = array('npi' => $npi);
+            $params = ['npi' => $npi];
             $url = $url . '?' . http_build_query($params);
         }
 
@@ -289,11 +289,6 @@ class ConnectorApi
         $error = "";
         $headers = ConnectorApi::buildHeader();
         $payload = json_encode($sendData, JSON_UNESCAPED_SLASHES);
-
-        error_log("GET URL: $url");
-        error_log("GET Headers: " . json_encode($headers));
-        error_log("GET URpayloadL: $payload");
-
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);

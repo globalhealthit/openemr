@@ -1,8 +1,8 @@
 #docker mount bind data directory
-docker/gheit-local/docker_data
-docker/gheit-dev/docker_data
-docker/gheit-prod/docker_data
-docker/development-easy/docker_data
+docker/gheit-local/docker_data/
+docker/gheit-dev/docker_data/
+docker/gheit-prod/docker_data/
+docker/development-easy/docker_data/
 openemr.sh
 
 # logs
@@ -36,4 +36,9 @@ ccdaservice/node_modules
 .phpunit.result.cache
 coverage/js-unit
 
+# phpstan
+tmp-phpstan/*
+
 public/images/logos/custom/*
+
+portal/firebase/firebase-service-account.json
